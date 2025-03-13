@@ -1,3 +1,4 @@
+// Инициализация при загрузке popup
 document.addEventListener('DOMContentLoaded', function() {
   try {
     console.log("Popup загружен, начинаем инициализацию...");
@@ -16,15 +17,18 @@ document.addEventListener('DOMContentLoaded', function() {
       console.warn("Элемент с id 'keyName' не найден");
     }
     
-    // Проверяем доступ к микрофону
-    console.log("Проверяем доступ к микрофону...");
-    checkMicrophoneAccess();
+    // Проверяем доступ к микрофону через content script
+    console.log("Проверяем статус расширения...");
+    checkContentScriptStatus();
+    
+    // Проверяем наличие API ключа
+    console.log("Проверяем API ключ...");
+    checkApiKey();
     
     // Находим кнопку настроек
     const settingsButton = document.getElementById('settings-button');
     if (settingsButton) {
       console.log("Кнопка настроек найдена, устанавливаем обработчик");
-      
       settingsButton.addEventListener('click', openOptionsPage);
     } else {
       console.warn("Кнопка настроек не найдена");
@@ -33,8 +37,131 @@ document.addEventListener('DOMContentLoaded', function() {
     console.log("Инициализация popup завершена");
   } catch (error) {
     console.error("Ошибка инициализации popup:", error);
+    updateStatus('error', 'Ошибка инициализации');
   }
 });
+
+// Функция для проверки статуса content script и доступа к микрофону
+function checkContentScriptStatus() {
+  try {
+    // Находим активную вкладку
+    chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
+      if (chrome.runtime.lastError) {
+        console.error("Ошибка при получении активной вкладки:", chrome.runtime.lastError);
+        updateStatus('error', 'Не удалось получить доступ к вкладке');
+        return;
+      }
+      
+      if (!tabs || tabs.length === 0) {
+        console.error("Не удалось найти активную вкладку");
+        updateStatus('error', 'Не удалось найти активную вкладку');
+        return;
+      }
+      
+      const currentTab = tabs[0];
+      
+      // Проверяем URL вкладки - не можем работать с системными страницами
+      if (currentTab.url.startsWith('chrome://') || 
+          currentTab.url.startsWith('chrome-extension://') || 
+          currentTab.url.startsWith('about:')) {
+        console.log("Обнаружена системная страница:", currentTab.url);
+        updateStatus('error', 'Расширение не работает на системных страницах');
+        return;
+      }
+      
+      // Отправляем сообщение в content script текущей вкладки
+      chrome.tabs.sendMessage(currentTab.id, {command: "checkMicrophoneStatus"}, function(response) {
+        if (chrome.runtime.lastError) {
+          console.warn("Не удалось связаться с content script:", chrome.runtime.lastError);
+          // На некоторых страницах content script может не быть запущен
+          updateStatus('error', 'Расширение недоступно на этой странице');
+          return;
+        }
+        
+        if (response) {
+          console.log("Получен ответ от content script:", response);
+          
+          if (response.hasAccess) {
+            updateStatus('success', 'Расширение активно');
+          } else {
+            updateStatus('error', response.errorMessage || 'Требуется доступ к микрофону');
+          }
+        } else {
+          console.warn("Получен пустой ответ от content script");
+          updateStatus('error', 'Не удалось проверить статус микрофона');
+        }
+      });
+    });
+  } catch (error) {
+    console.error("Ошибка при проверке статуса content script:", error);
+    updateStatus('error', 'Ошибка при проверке статуса расширения');
+  }
+}
+
+// Функция для проверки API ключа
+function checkApiKey() {
+  try {
+    chrome.storage.sync.get(['apiKey'], function(result) {
+      if (chrome.runtime.lastError) {
+        console.error("Ошибка при получении API ключа:", chrome.runtime.lastError);
+        updateApiKeyStatus(false, 'Ошибка доступа к настройкам');
+        return;
+      }
+      
+      if (!result.apiKey || result.apiKey.trim() === '') {
+        updateApiKeyStatus(false, 'Требуется указать API ключ в настройках');
+      } else if (!result.apiKey.startsWith('sk_')) {
+        updateApiKeyStatus(false, 'Неверный формат API ключа (должен начинаться с sk_)');
+      } else {
+        updateApiKeyStatus(true, 'API ключ валиден');
+      }
+    });
+  } catch (error) {
+    console.error("Ошибка при проверке API ключа:", error);
+    updateApiKeyStatus(false, 'Ошибка при проверке API ключа');
+  }
+}
+
+// Функция для обновления статуса микрофона в UI
+function updateStatus(type, message) {
+  // Проверяем наличие элементов UI
+  const statusElement = document.getElementById('status');
+  if (!statusElement) {
+    console.error('Элемент status не найден в DOM');
+    return;
+  }
+  
+  const statusText = statusElement.querySelector('span');
+  if (!statusText) {
+    console.error('Текстовый элемент не найден в элементе status');
+    return;
+  }
+  
+  // Обновляем UI
+  statusElement.className = type === 'success' ? 'status' : 'status error';
+  statusText.textContent = message;
+  
+  console.log(`Статус обновлен: ${message} (${type})`);
+}
+
+// Функция для обновления статуса API ключа в UI
+function updateApiKeyStatus(isValid, message) {
+  console.log(`Статус API ключа: ${isValid ? 'валидный' : 'невалидный'} - ${message}`);
+  
+  // Если требуется, можно добавить отдельный элемент UI для статуса API ключа
+  // Сейчас статус API ключа влияет на общий статус, если микрофон доступен
+  
+  const statusElement = document.getElementById('status');
+  const statusText = statusElement?.querySelector('span');
+  
+  // Если статус уже показывает ошибку, не переопределяем его сообщением об API ключе
+  if (statusElement && statusText && statusElement.className === 'status') {
+    if (!isValid) {
+      statusElement.className = 'status error';
+      statusText.textContent = message;
+    }
+  }
+}
 
 // Функция для открытия страницы настроек
 function openOptionsPage() {
@@ -94,152 +221,5 @@ function fallbackOpenOptions(url) {
   } catch (error) {
     console.error("Ошибка при использовании запасного метода:", error);
     alert("Не удалось открыть страницу настроек: " + error.message);
-  }
-}
-
-// Функция для проверки доступа к микрофону
-async function checkMicrophoneAccess() {
-  console.log("Функция checkMicrophoneAccess начала выполнение");
-  
-  // Проверяем наличие элементов UI
-  const statusElement = document.getElementById('status');
-  if (!statusElement) {
-    console.error('Элемент status не найден в DOM');
-    return;
-  }
-  
-  const statusText = statusElement.querySelector('span');
-  if (!statusText) {
-    console.error('Текстовый элемент не найден в элементе status');
-    return;
-  }
-  
-  let stream = null;
-  
-  try {
-    // Проверяем, поддерживается ли API MediaDevices
-    if (!navigator.mediaDevices) {
-      console.warn('MediaDevices API не поддерживается в этом браузере');
-      statusElement.className = 'status error';
-      statusText.textContent = 'Доступ к микрофону не поддерживается браузером';
-      
-      // Несмотря на ошибку, проверяем API ключ
-      try {
-        checkApiKey(statusElement, statusText);
-      } catch (apiCheckError) {
-        console.error('Ошибка при проверке API ключа:', apiCheckError);
-      }
-      
-      return;
-    }
-    
-    if (!navigator.mediaDevices.getUserMedia) {
-      console.warn('getUserMedia API не поддерживается в этом браузере');
-      statusElement.className = 'status error';
-      statusText.textContent = 'Доступ к микрофону не поддерживается браузером';
-      
-      // Несмотря на ошибку, проверяем API ключ
-      try {
-        checkApiKey(statusElement, statusText);
-      } catch (apiCheckError) {
-        console.error('Ошибка при проверке API ключа:', apiCheckError);
-      }
-      
-      return;
-    }
-    
-    // Пытаемся получить доступ к микрофону
-    console.log('Запрашиваем доступ к микрофону...');
-    
-    stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    
-    // Если доступ получен, показываем статус "Активно"
-    console.log('Доступ к микрофону получен успешно');
-    statusElement.className = 'status';
-    statusText.textContent = 'Расширение активно';
-    
-    // Проверяем API ключ
-    try {
-      console.log('Проверяем API ключ...');
-      checkApiKey(statusElement, statusText);
-    } catch (apiCheckError) {
-      console.error('Ошибка при проверке API ключа:', apiCheckError);
-    }
-    
-  } catch (error) {
-    // Обрабатываем разные типы ошибок
-    console.error('Ошибка доступа к микрофону:', error);
-    
-    statusElement.className = 'status error';
-    
-    // Определяем тип ошибки и устанавливаем соответствующее сообщение
-    if (error.name) {
-      console.log('Тип ошибки:', error.name);
-      
-      if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
-        statusText.textContent = 'Доступ к микрофону запрещен';
-      } else if (error.name === 'NotFoundError' || error.name === 'DevicesNotFoundError') {
-        statusText.textContent = 'Микрофон не найден';
-      } else if (error.name === 'NotReadableError' || error.name === 'TrackStartError') {
-        statusText.textContent = 'Микрофон занят другим приложением';
-      } else if (error.name === 'OverconstrainedError' || error.name === 'ConstraintNotSatisfiedError') {
-        statusText.textContent = 'Технические ограничения микрофона';
-      } else if (error.name === 'TypeError') {
-        statusText.textContent = 'Ошибка типа при доступе к микрофону';
-      } else {
-        statusText.textContent = 'Ошибка микрофона: ' + error.name;
-      }
-    } else {
-      statusText.textContent = 'Требуется доступ к микрофону';
-    }
-    
-    // Несмотря на ошибку, проверяем API ключ
-    try {
-      console.log('Проверяем API ключ несмотря на ошибку микрофона...');
-      checkApiKey(statusElement, statusText);
-    } catch (apiCheckError) {
-      console.error('Ошибка при проверке API ключа:', apiCheckError);
-    }
-  } finally {
-    // Освобождаем ресурсы - важно остановить все треки, если они есть
-    if (stream) {
-      try {
-        stream.getTracks().forEach(track => {
-          track.stop();
-          console.log('Трек микрофона остановлен:', track.kind);
-        });
-        console.log('Все треки микрофона остановлены');
-      } catch (trackError) {
-        console.error('Ошибка при освобождении ресурсов микрофона:', trackError);
-      }
-    }
-  }
-  
-  console.log("Функция checkMicrophoneAccess завершена");
-}
-
-// Функция для проверки API ключа
-function checkApiKey(statusElement, statusText) {
-  try {
-    chrome.storage.sync.get(['apiKey'], function(result) {
-      if (chrome.runtime.lastError) {
-        console.error("Ошибка при получении API ключа:", chrome.runtime.lastError);
-        statusElement.className = 'status error';
-        statusText.textContent = 'Ошибка доступа к настройкам';
-        return;
-      }
-      
-      if (!result.apiKey || result.apiKey.trim() === '') {
-        statusElement.className = 'status error';
-        statusText.textContent = 'Требуется указать API ключ в настройках';
-      } else if (!result.apiKey.startsWith('sk_')) {
-        statusElement.className = 'status error';
-        statusText.textContent = 'Неверный формат API ключа (должен начинаться с sk_)';
-      }
-    });
-  } catch (error) {
-    console.error("Ошибка при проверке API ключа:", error);
-    statusElement.className = 'status error';
-    statusText.textContent = 'Ошибка при проверке API ключа';
   }
 }

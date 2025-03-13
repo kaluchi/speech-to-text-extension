@@ -888,3 +888,84 @@ document.addEventListener("keyup", (event) => {
     }
   }
 });
+
+
+// Обработчик сообщений от popup.js
+chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
+  console.log("Получено сообщение в content script:", request);
+  
+  if (request.command === "checkMicrophoneStatus") {
+    // Проверяем доступ к микрофону
+    checkMicrophonePermission()
+      .then(result => {
+        console.log("Результат проверки доступа к микрофону:", result);
+        sendResponse(result);
+      })
+      .catch(error => {
+        console.error("Ошибка при проверке доступа к микрофону:", error);
+        sendResponse({
+          hasAccess: false,
+          errorMessage: getErrorMessageForMicrophone(error)
+        });
+      });
+      
+    // Необходимо вернуть true для асинхронной отправки ответа
+    return true;
+  }
+});
+
+// Функция для проверки разрешений микрофона
+async function checkMicrophonePermission() {
+  try {
+    // Запрашиваем доступ к микрофону
+    const stream = await navigator.mediaDevices.getUserMedia({audio: true});
+    
+    // Если успешно, сразу освобождаем ресурсы
+    stream.getTracks().forEach(track => track.stop());
+    
+    return {
+      hasAccess: true
+    };
+  } catch (error) {
+    // Возвращаем информацию об ошибке
+    return {
+      hasAccess: false,
+      errorMessage: getErrorMessageForMicrophone(error)
+    };
+  }
+}
+
+// Функция для получения понятного сообщения об ошибке
+function getErrorMessageForMicrophone(error) {
+  if (!error) {
+    return "Неизвестная ошибка";
+  }
+  
+  if (error.name) {
+    switch (error.name) {
+      case "NotAllowedError":
+      case "PermissionDeniedError":
+        return "Доступ к микрофону запрещен";
+        
+      case "NotFoundError":
+      case "DevicesNotFoundError":
+        return "Микрофон не найден";
+        
+      case "NotReadableError":
+      case "TrackStartError":
+        return "Микрофон занят другим приложением";
+        
+      case "OverconstrainedError":
+      case "ConstraintNotSatisfiedError":
+        return "Технические ограничения микрофона";
+        
+      case "TypeError":
+        return "Неверный тип данных при запросе микрофона";
+        
+      default:
+        return `Ошибка микрофона: ${error.name}`;
+    }
+  }
+  
+  return error.message || "Неизвестная ошибка доступа к микрофону";
+}
