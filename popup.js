@@ -49,13 +49,26 @@ async function checkMicrophoneAccess() {
 
 // Функция для проверки API ключа
 function checkApiKey(statusElement, statusText) {
-  chrome.storage.sync.get(['apiKey'], function(result) {
-    if (!result.apiKey || result.apiKey.trim() === '') {
-      statusElement.className = 'status error';
-      statusText.textContent = 'Требуется указать API ключ в настройках';
-    } else if (!result.apiKey.startsWith('sk_')) {
-      statusElement.className = 'status error';
-      statusText.textContent = 'Неверный формат API ключа (должен начинаться с sk_)';
-    }
-  });
+  try {
+    chrome.storage.sync.get(['apiKey'], function(result) {
+      if (chrome.runtime.lastError) {
+        console.error("Ошибка при получении API ключа:", chrome.runtime.lastError);
+        statusElement.className = 'status error';
+        statusText.textContent = 'Ошибка доступа к настройкам';
+        return;
+      }
+      
+      if (!result.apiKey || result.apiKey.trim() === '') {
+        statusElement.className = 'status error';
+        statusText.textContent = 'Требуется указать API ключ в настройках';
+      } else if (!result.apiKey.startsWith('sk_')) {
+        statusElement.className = 'status error';
+        statusText.textContent = 'Неверный формат API ключа (должен начинаться с sk_)';
+      }
+    });
+  } catch (error) {
+    console.error("Ошибка при проверке API ключа:", error);
+    statusElement.className = 'status error';
+    statusText.textContent = 'Ошибка при проверке API ключа';
+  }
 }

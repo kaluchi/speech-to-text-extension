@@ -16,11 +16,24 @@ const toggleVisibilityButton = document.getElementById('toggle-visibility');
 
 // Функция для загрузки настроек из хранилища
 function loadSettings() {
-  chrome.storage.sync.get(DEFAULT_SETTINGS, (items) => {
-    apiKeyInput.value = items.apiKey || '';
-    languageCodeSelect.value = items.languageCode || 'ru';
-    tagAudioEventsSelect.value = items.tagAudioEvents || 'false';
-  });
+  try {
+    chrome.storage.sync.get(DEFAULT_SETTINGS, (items) => {
+      if (chrome.runtime.lastError) {
+        console.error("Ошибка при загрузке настроек:", chrome.runtime.lastError);
+        showStatus('Ошибка при загрузке настроек! Проверьте консоль для деталей.', 'error');
+        return;
+      }
+      
+      apiKeyInput.value = items.apiKey || '';
+      languageCodeSelect.value = items.languageCode || 'ru';
+      tagAudioEventsSelect.value = items.tagAudioEvents || 'false';
+      
+      console.log("Настройки успешно загружены");
+    });
+  } catch (error) {
+    console.error("Исключение при загрузке настроек:", error);
+    showStatus('Ошибка при загрузке настроек!', 'error');
+  }
 }
 
 // Функция для сохранения настроек в хранилище

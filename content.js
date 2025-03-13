@@ -89,24 +89,33 @@ function loadSettings() {
 loadSettings();
 
 // Слушаем изменения настроек
-chrome.storage.onChanged.addListener((changes, areaName) => {
-  if (areaName === 'sync') {
-    if (changes.apiKey) {
-      settings.apiKey = changes.apiKey.newValue;
-    }
-    if (changes.languageCode) {
-      settings.languageCode = changes.languageCode.newValue;
-    }
-    if (changes.tagAudioEvents) {
-      settings.tagAudioEvents = changes.tagAudioEvents.newValue;
-    }
-    console.log("Настройки обновлены:", JSON.stringify({
-      apiKeyLength: settings.apiKey ? settings.apiKey.length : 0,
-      languageCode: settings.languageCode,
-      tagAudioEvents: settings.tagAudioEvents
-    }));
+try {
+  if (chrome.storage && chrome.storage.onChanged) {
+    chrome.storage.onChanged.addListener((changes, areaName) => {
+      if (areaName === 'sync') {
+        if (changes.apiKey) {
+          settings.apiKey = changes.apiKey.newValue;
+        }
+        if (changes.languageCode) {
+          settings.languageCode = changes.languageCode.newValue;
+        }
+        if (changes.tagAudioEvents) {
+          settings.tagAudioEvents = changes.tagAudioEvents.newValue;
+        }
+        console.log("Настройки обновлены:", JSON.stringify({
+          apiKeyLength: settings.apiKey ? settings.apiKey.length : 0,
+          languageCode: settings.languageCode,
+          tagAudioEvents: settings.tagAudioEvents
+        }));
+      }
+    });
+    console.log("Слушатель изменений настроек успешно установлен");
+  } else {
+    console.warn("chrome.storage.onChanged API недоступен");
   }
-});
+} catch (error) {
+  console.error("Ошибка при установке слушателя изменений настроек:", error);
+}
 
 // Определяем состояния
 const States = {
