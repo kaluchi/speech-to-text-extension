@@ -60,24 +60,39 @@ function prepareTextForInsertion(text, beforeCursor) {
 
 // Настройки по умолчанию
 let settings = {
-  apiKey: 'sk_58679ae6974e4b0f24f6a3d7e116d7159af6d56f4c16102a',
+  apiKey: '',
   languageCode: 'ru',
-  tagAudioEvents: 'false'
+  tagAudioEvents: 'false',
+  timestampsGranularity: 'none',
+  diarize: 'false',
+  numSpeakers: null,
+  biasedKeywords: [],
+  debugAudio: 'false'
 };
 
 // Загружаем настройки из хранилища при запуске
 function loadSettings() {
   try {
     chrome.storage.sync.get({
-      apiKey: 'sk_58679ae6974e4b0f24f6a3d7e116d7159af6d56f4c16102a',
+      apiKey: '',
       languageCode: 'ru',
-      tagAudioEvents: 'false'
+      tagAudioEvents: 'false',
+      timestampsGranularity: 'none',
+      diarize: 'false',
+      numSpeakers: null,
+      biasedKeywords: [],
+      debugAudio: 'false'
     }, (items) => {
       settings = items;
       console.log("Настройки загружены:", JSON.stringify({
         apiKeyLength: settings.apiKey ? settings.apiKey.length : 0,
         languageCode: settings.languageCode,
-        tagAudioEvents: settings.tagAudioEvents
+        tagAudioEvents: settings.tagAudioEvents,
+        timestampsGranularity: settings.timestampsGranularity,
+        diarize: settings.diarize,
+        numSpeakers: settings.numSpeakers,
+        biasedKeywords: settings.biasedKeywords,
+        debugAudio: settings.debugAudio
       }));
     });
   } catch (error) {
@@ -102,10 +117,30 @@ try {
         if (changes.tagAudioEvents) {
           settings.tagAudioEvents = changes.tagAudioEvents.newValue;
         }
+        if (changes.timestampsGranularity) {
+          settings.timestampsGranularity = changes.timestampsGranularity.newValue;
+        }
+        if (changes.diarize) {
+          settings.diarize = changes.diarize.newValue;
+        }
+        if (changes.numSpeakers) {
+          settings.numSpeakers = changes.numSpeakers.newValue;
+        }
+        if (changes.biasedKeywords) {
+          settings.biasedKeywords = changes.biasedKeywords.newValue;
+        }
+        if (changes.debugAudio) {
+          settings.debugAudio = changes.debugAudio.newValue;
+        }
         console.log("Настройки обновлены:", JSON.stringify({
           apiKeyLength: settings.apiKey ? settings.apiKey.length : 0,
           languageCode: settings.languageCode,
-          tagAudioEvents: settings.tagAudioEvents
+          tagAudioEvents: settings.tagAudioEvents,
+          timestampsGranularity: settings.timestampsGranularity,
+          diarize: settings.diarize,
+          numSpeakers: settings.numSpeakers,
+          biasedKeywords: settings.biasedKeywords,
+          debugAudio: settings.debugAudio
         }));
       }
     });
@@ -325,8 +360,11 @@ function cleanupRecordingResources() {
 function sendToServer(audioBlob) {
   console.log(`Sending audio to server: ${audioBlob.size} bytes, Format: ${audioBlob.type}`);
   
-  // Временно отключаем воспроизведение записи
-  // playRecording(audioBlob);
+  // Если включена отладка звука, воспроизводим запись
+  if (settings.debugAudio === 'true') {
+    console.log('Отладка звука включена, воспроизводим запись');
+    playRecording(audioBlob);
+  }
   
   // Отправляем запись в ElevenLabs API для преобразования речи в текст
   sendToElevenLabsAPI(audioBlob);
@@ -351,12 +389,13 @@ async function sendToElevenLabsAPI(audioBlob) {
     console.log("Отправка аудио в ElevenLabs API для распознавания речи...");
     
     // ElevenLabs API endpoint для Speech-to-Text
+    // Документация: https://elevenlabs.io/docs/api-reference/speech-to-text/convert
     const apiUrl = "https://api.elevenlabs.io/v1/speech-to-text";
     
     // Создаем FormData для отправки аудио
     const formData = new FormData();
     
-    // Согласно документации: https://elevenlabs.io/docs/api-reference/speech-to-text/convert
+    // Обязательные параметры
     formData.append('model_id', 'scribe_v1'); // Единственная доступная модель
     formData.append('file', audioBlob, `recording.${getFileExtension(audioBlob.type)}`);
     
@@ -366,6 +405,26 @@ async function sendToElevenLabsAPI(audioBlob) {
     // Добавляем код языка, если он задан
     if (settings.languageCode) {
       formData.append('language_code', settings.languageCode);
+    }
+
+    // Добавляем детализацию временных меток
+    if (settings.timestampsGranularity && settings.timestampsGranularity !== 'none') {
+      formData.append('timestamps_granularity', settings.timestampsGranularity);
+    }
+
+    // Добавляем разметку говорящих
+    if (settings.diarize === 'true') {
+      formData.append('diarize', true);
+    }
+
+    // Добавляем количество говорящих, если указано
+    if (settings.numSpeakers) {
+      formData.append('num_speakers', parseInt(settings.numSpeakers));
+    }
+
+    // Добавляем ключевые слова, если есть
+    if (settings.biasedKeywords && settings.biasedKeywords.length > 0) {
+      formData.append('biased_keywords', JSON.stringify(settings.biasedKeywords));
     }
     
     // Отправляем запрос
