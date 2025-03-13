@@ -229,13 +229,14 @@ async function startRecording() {
     // Собираем данные записи
     mediaRecorder.ondataavailable = (event) => {
       audioChunks.push(event.data);
+      // Инициализация завершена после получения первого фрагмента
+      isRecordingInitializing = false;
     };
-
-    mediaRecorder.start();
+    // просим присылать фрагменты каждые 1000 миллисекунд
+    mediaRecorder.start(1000);
     console.log(`Recording started with format: ${mediaRecorder.mimeType}`);
     
-    // Инициализация завершена
-    isRecordingInitializing = false;
+
   } catch (err) {
     console.error("Error starting recording:", err);
     
