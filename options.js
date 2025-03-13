@@ -9,10 +9,12 @@ const DEFAULT_SETTINGS = {
 const apiKeyInput = document.getElementById('api-key');
 const languageCodeSelect = document.getElementById('language-code');
 const tagAudioEventsSelect = document.getElementById('tag-audio-events');
-const saveButton = document.getElementById('save-btn');
 const resetButton = document.getElementById('reset-btn');
 const statusElement = document.getElementById('status');
 const toggleVisibilityButton = document.getElementById('toggle-visibility');
+
+// Текущие настройки
+let currentSettings = {...DEFAULT_SETTINGS};
 
 // Функция для загрузки настроек из хранилища
 function loadSettings() {
@@ -24,9 +26,20 @@ function loadSettings() {
         return;
       }
       
-      apiKeyInput.value = items.apiKey || '';
-      languageCodeSelect.value = items.languageCode || 'ru';
-      tagAudioEventsSelect.value = items.tagAudioEvents || 'false';
+      // Сохраняем текущие настройки
+      currentSettings = {
+        apiKey: items.apiKey || '',
+        languageCode: items.languageCode || 'ru',
+        tagAudioEvents: items.tagAudioEvents || 'false'
+      };
+      
+      // Заполняем поля формы
+      apiKeyInput.value = currentSettings.apiKey;
+      languageCodeSelect.value = currentSettings.languageCode;
+      tagAudioEventsSelect.value = currentSettings.tagAudioEvents;
+      
+      // Обновляем видимость кнопки сброса
+      updateResetButtonVisibility();
       
       console.log("Настройки успешно загружены");
     });
@@ -42,12 +55,28 @@ function saveSettings() {
   const languageCode = languageCodeSelect.value;
   const tagAudioEvents = tagAudioEventsSelect.value;
   
+  // Обновляем текущие настройки
+  currentSettings = {
+    apiKey,
+    languageCode,
+    tagAudioEvents
+  };
+  
   chrome.storage.sync.set({
-    apiKey: apiKey,
-    languageCode: languageCode,
-    tagAudioEvents: tagAudioEvents
+    apiKey,
+    languageCode,
+    tagAudioEvents
   }, () => {
+    if (chrome.runtime.lastError) {
+      console.error("Ошибка при сохранении настроек:", chrome.runtime.lastError);
+      showStatus('Ошибка при сохранении настроек!', 'error');
+      return;
+    }
+    
     showStatus('Настройки сохранены!', 'success');
+    
+    // Обновляем видимость кнопки сброса
+    updateResetButtonVisibility();
   });
 }
 
@@ -56,6 +85,9 @@ function resetSettings() {
   apiKeyInput.value = DEFAULT_SETTINGS.apiKey;
   languageCodeSelect.value = DEFAULT_SETTINGS.languageCode;
   tagAudioEventsSelect.value = DEFAULT_SETTINGS.tagAudioEvents;
+  
+  // Вызываем сохранение, чтобы обновить хранилище
+  saveSettings();
   
   showStatus('Настройки сброшены к значениям по умолчанию!', 'success');
 }
@@ -82,18 +114,52 @@ function toggleApiKeyVisibility() {
   }
 }
 
+// Функция для проверки, отличаются ли текущие настройки от дефолтных
+function areSettingsDifferent() {
+  return (
+    apiKeyInput.value !== DEFAULT_SETTINGS.apiKey ||
+    languageCodeSelect.value !== DEFAULT_SETTINGS.languageCode ||
+    tagAudioEventsSelect.value !== DEFAULT_SETTINGS.tagAudioEvents
+  );
+}
+
+// Функция для обновления видимости кнопки сброса
+function updateResetButtonVisibility() {
+  if (areSettingsDifferent()) {
+    resetButton.style.display = 'inline-block';
+  } else {
+    resetButton.style.display = 'none';
+  }
+}
+
+// Функция для автоматического сохранения при изменении настроек
+function setupAutoSave() {
+  // Для каждого элемента управления добавляем обработчик события изменения
+  apiKeyInput.addEventListener('input', () => {
+    // Валидация API ключа (простая проверка формата)
+    const value = apiKeyInput.value.trim();
+    if (value && !value.startsWith('sk_')) {
+      apiKeyInput.setCustomValidity('API ключ ElevenLabs должен начинаться с "sk_"');
+    } else {
+      apiKeyInput.setCustomValidity('');
+    }
+    
+    // Если ключ валидный, сохраняем настройки
+    if (apiKeyInput.validity.valid) {
+      saveSettings();
+    }
+  });
+  
+  // Для селектов
+  languageCodeSelect.addEventListener('change', saveSettings);
+  tagAudioEventsSelect.addEventListener('change', saveSettings);
+}
+
 // Обработчики событий
-document.addEventListener('DOMContentLoaded', loadSettings);
-saveButton.addEventListener('click', saveSettings);
+document.addEventListener('DOMContentLoaded', () => {
+  loadSettings();
+  setupAutoSave();
+});
+
 resetButton.addEventListener('click', resetSettings);
 toggleVisibilityButton.addEventListener('click', toggleApiKeyVisibility);
-
-// Валидация API ключа (простая проверка формата)
-apiKeyInput.addEventListener('input', () => {
-  const value = apiKeyInput.value.trim();
-  if (value && !value.startsWith('sk_')) {
-    apiKeyInput.setCustomValidity('API ключ ElevenLabs должен начинаться с "sk_"');
-  } else {
-    apiKeyInput.setCustomValidity('');
-  }
-});

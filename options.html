@@ -53,8 +53,7 @@
     }
     .button-container {
       margin-top: 30px;
-      display: flex;
-      justify-content: space-between;
+      text-align: center;
     }
     button {
       padding: 10px 15px;
@@ -63,13 +62,10 @@
       font-size: 14px;
       cursor: pointer;
     }
-    #save-btn {
-      background-color: #4285f4;
-      color: white;
-    }
     #reset-btn {
       background-color: #f44336;
       color: white;
+      display: none;
     }
     #status {
       margin-top: 15px;
@@ -133,7 +129,6 @@
   
   <div class="button-container">
     <button id="reset-btn">Сбросить настройки</button>
-    <button id="save-btn">Сохранить</button>
   </div>
   
   <div id="status"></div>
