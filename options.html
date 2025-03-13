@@ -86,6 +86,45 @@
     .visible {
       opacity: 1;
     }
+    .range-container {
+      margin-top: 10px;
+    }
+    .range-container input {
+      width: 100%;
+    }
+    .keywords-container {
+      margin-top: 10px;
+    }
+    .keyword-item {
+      display: flex;
+      align-items: center;
+      margin-bottom: 5px;
+    }
+    .keyword-item input[type="text"] {
+      flex: 2;
+      margin-right: 10px;
+    }
+    .keyword-item input[type="number"] {
+      flex: 1;
+      margin-right: 10px;
+    }
+    .remove-keyword {
+      background: #f44336;
+      color: white;
+      border: none;
+      padding: 5px 10px;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    .add-keyword {
+      background: #4CAF50;
+      color: white;
+      border: none;
+      padding: 8px 15px;
+      border-radius: 4px;
+      cursor: pointer;
+      margin-top: 10px;
+    }
   </style>
 </head>
 <body>
@@ -103,6 +142,7 @@
   <div class="form-group">
     <label for="language-code">Язык распознавания:</label>
     <select id="language-code">
+      <option value="">Автоопределение языка</option>
       <option value="ru">Русский</option>
       <option value="en">English</option>
       <option value="uk">Українська</option>
@@ -113,7 +153,6 @@
       <option value="it">Italiano</option>
       <option value="ja">日本語</option>
       <option value="zh">中文</option>
-      <option value="">Автоопределение языка</option>
     </select>
     <p class="info-text">Выберите язык распознавания для повышения точности.</p>
   </div>
@@ -124,7 +163,50 @@
       <option value="false">Выключено</option>
       <option value="true">Включено</option>
     </select>
-    <p class="info-text">При включении в распознанном тексте будут отмечены паузы, запинки и другие звуковые события.</p>
+    <p class="info-text">При включении в распознанном тексте будут отмечены паузы, смех и другие звуковые события.</p>
+  </div>
+
+  <div class="form-group">
+    <label for="timestamps-granularity">Детализация временных меток:</label>
+    <select id="timestamps-granularity">
+      <option value="none">Отключено</option>
+      <option value="word">По словам</option>
+      <option value="character">По символам</option>
+    </select>
+    <p class="info-text">Выберите уровень детализации временных меток в транскрипции.</p>
+  </div>
+
+  <div class="form-group">
+    <label for="diarize">Разметка говорящих:</label>
+    <select id="diarize">
+      <option value="false">Выключено</option>
+      <option value="true">Включено</option>
+    </select>
+    <p class="info-text">Включите для определения кто и когда говорит в записи.</p>
+  </div>
+
+  <div class="form-group">
+    <label for="num-speakers">Максимальное количество говорящих:</label>
+    <input type="number" id="num-speakers" min="1" max="32" placeholder="Автоопределение">
+    <p class="info-text">Укажите максимальное количество говорящих (от 1 до 32). Оставьте пустым для автоопределения.</p>
+  </div>
+
+  <div class="form-group">
+    <label>Ключевые слова для улучшения распознавания:</label>
+    <div id="keywords-container" class="keywords-container">
+      <!-- Сюда будут динамически добавляться поля для ключевых слов -->
+    </div>
+    <button id="add-keyword" class="add-keyword">Добавить ключевое слово</button>
+    <p class="info-text">Добавьте ключевые слова и их веса (от -10 до 10) для улучшения распознавания.</p>
+  </div>
+
+  <div class="form-group">
+    <label for="debug-audio">Отладка записанного звука:</label>
+    <select id="debug-audio">
+      <option value="false">Выключено</option>
+      <option value="true">Включено</option>
+    </select>
+    <p class="info-text">При включении будет воспроизводиться запись параллельно с отправкой на сервер.</p>
   </div>
   
   <div class="button-container">
