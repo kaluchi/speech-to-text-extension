@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Настройки голосового ввода</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 20px;
+      color: #333;
+    }
+    h1 {
+      color: #333;
+      border-bottom: 2px solid #eee;
+      padding-bottom: 10px;
+      margin-bottom: 20px;
+    }
+    .form-group {
+      margin-bottom: 20px;
+    }
+    label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: bold;
+    }
+    input[type="text"],
+    select {
+      width: 100%;
+      padding: 8px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      box-sizing: border-box;
+      font-size: 14px;
+    }
+    .api-key-container {
+      position: relative;
+    }
+    .toggle-visibility {
+      position: absolute;
+      right: 10px;
+      top: 10px;
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: #666;
+    }
+    .info-text {
+      font-size: 13px;
+      color: #666;
+      margin-top: 5px;
+    }
+    .button-container {
+      margin-top: 30px;
+      display: flex;
+      justify-content: space-between;
+    }
+    button {
+      padding: 10px 15px;
+      border: none;
+      border-radius: 4px;
+      font-size: 14px;
+      cursor: pointer;
+    }
+    #save-btn {
+      background-color: #4285f4;
+      color: white;
+    }
+    #reset-btn {
+      background-color: #f44336;
+      color: white;
+    }
+    #status {
+      margin-top: 15px;
+      padding: 10px;
+      border-radius: 4px;
+      text-align: center;
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+    .success {
+      background-color: #d4edda;
+      color: #155724;
+    }
+    .error {
+      background-color: #f8d7da;
+      color: #721c24;
+    }
+    .visible {
+      opacity: 1;
+    }
+  </style>
+</head>
+<body>
+  <h1>Настройки голосового ввода</h1>
+  
+  <div class="form-group">
+    <label for="api-key">API ключ ElevenLabs:</label>
+    <div class="api-key-container">
+      <input type="password" id="api-key" placeholder="Введите ваш API ключ ElevenLabs">
+      <button class="toggle-visibility" id="toggle-visibility">Показать</button>
+    </div>
+    <p class="info-text">Вы можете получить API ключ, зарегистрировавшись на <a href="https://elevenlabs.io" target="_blank">elevenlabs.io</a></p>
+  </div>
+  
+  <div class="form-group">
+    <label for="language-code">Язык распознавания:</label>
+    <select id="language-code">
+      <option value="ru">Русский</option>
+      <option value="en">English</option>
+      <option value="uk">Українська</option>
+      <option value="be">Беларуская</option>
+      <option value="de">Deutsch</option>
+      <option value="fr">Français</option>
+      <option value="es">Español</option>
+      <option value="it">Italiano</option>
+      <option value="ja">日本語</option>
+      <option value="zh">中文</option>
+      <option value="">Автоопределение языка</option>
+    </select>
+    <p class="info-text">Выберите язык распознавания для повышения точности.</p>
+  </div>
+  
+  <div class="form-group">
+    <label for="tag-audio-events">Маркировка звуковых событий:</label>
+    <select id="tag-audio-events">
+      <option value="false">Выключено</option>
+      <option value="true">Включено</option>
+    </select>
+    <p class="info-text">При включении в распознанном тексте будут отмечены паузы, запинки и другие звуковые события.</p>
+  </div>
+  
+  <div class="button-container">
+    <button id="reset-btn">Сбросить настройки</button>
+    <button id="save-btn">Сохранить</button>
+  </div>
+  
+  <div id="status"></div>
+
+  <script src="options.js"></script>
+</body>
+</html>
