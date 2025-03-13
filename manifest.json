@@ -5,7 +5,8 @@
   "description": "Двойное нажатие Cmd/Ctrl активирует запись звука и преобразование в текст с ElevenLabs API",
   "permissions": [
     "activeTab",
-    "storage"
+    "storage",
+    "tabs"
   ],
   "content_scripts": [
     {
@@ -26,5 +27,6 @@
       "48": "image48.png",
       "128": "image128.png"
     }
-  }
+  },
+  "options_page": "options.html"
 }
