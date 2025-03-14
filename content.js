@@ -196,49 +196,69 @@ function getSupportedMimeType() {
   
   for (const type of possibleTypes) {
     if (MediaRecorder.isTypeSupported(type)) {
-      console.log(`Browser supports recording format: ${type}`);
+      console.log(`Браузер поддерживает формат записи: ${type}`);
       return type;
     }
   }
   
-  console.log('No specified audio format supported, using default');
+  console.log('Указанные форматы не поддерживаются, используем формат по умолчанию');
   return '';
 }
 
 // Флаг для отслеживания процесса инициализации записи
 let isRecordingInitializing = false;
 
+// Флаг для контроля создания MediaRecorder
+let createMediaRecorderAllowed = false;
+
+
+// Потеря фокуса окном бло
+window.addEventListener('blur', () => {
+  createMediaRecorderAllowed = false;
+  console.log('Окно потеряло фокус, createMediaRecorderAllowed =', createMediaRecorderAllowed);
+  
+});
+
 // Функция начала записи аудио
 async function startRecording() {
   try {
     // Устанавливаем флаг, что запись инициализируется
     isRecordingInitializing = true;
+    createMediaRecorderAllowed = true;
     
     audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
     
-    // Выбираем поддерживаемый формат
-    const mimeType = getSupportedMimeType();
-    
-    // Создаем MediaRecorder с подходящим форматом
-    mediaRecorder = mimeType 
-      ? new MediaRecorder(audioStream, { mimeType }) 
-      : new MediaRecorder(audioStream);
-    
-    audioChunks = []; // Очищаем массив перед новой записью
-
-    // Собираем данные записи
-    mediaRecorder.ondataavailable = (event) => {
-      audioChunks.push(event.data);
-      // Инициализация завершена после получения первого фрагмента
+    // Проверяем флаг после получения разрешения, так как во время показа попапа фокус мог быть потерян
+    if (!createMediaRecorderAllowed) {
+      console.log('Разрешение получено, но окно потеряло фокус. Прерываем создание MediaRecorder');
+      // Освобождаем ресурсы
+      audioStream.getTracks().forEach(track => track.stop());
+      audioStream = null;
       isRecordingInitializing = false;
-    };
-    // просим присылать фрагменты каждые 1000 миллисекунд
-    mediaRecorder.start(1000);
-    console.log(`Recording started with format: ${mediaRecorder.mimeType}`);
-    
+    } else {
+      // Выбираем поддерживаемый формат
+      const mimeType = getSupportedMimeType();
+      
+      // Создаем MediaRecorder с подходящим форматом
+      mediaRecorder = mimeType 
+        ? new MediaRecorder(audioStream, { mimeType }) 
+        : new MediaRecorder(audioStream);
+      
+      audioChunks = []; // Очищаем массив перед новой записью
+
+      // Собираем данные записи
+      mediaRecorder.ondataavailable = (event) => {
+        audioChunks.push(event.data);
+        // Инициализация завершена после получения первого фрагмента
+        isRecordingInitializing = false;
+      };
+      // просим присылать фрагменты каждые 1000 миллисекунд
+      mediaRecorder.start(1000);
+      console.log(`Запись начата в формате: ${mediaRecorder.mimeType}`);
+    }
 
   } catch (err) {
-    console.error("Error starting recording:", err);
+    console.error("Ошибка при запуске записи:", err);
     
     // Освобождаем ресурсы в случае ошибки
     if (audioStream) {
@@ -258,7 +278,7 @@ function stopRecording() {
   try {
     // Если инициализация все еще продолжается, подождем немного
     if (isRecordingInitializing) {
-      console.log("Recording initialization in progress, waiting to stop safely...");
+      console.log("Инициализация записи в процессе, ожидаем безопасной остановки...");
       
       // Создаем счетчик попыток остановки
       let retryCount = 0;
@@ -274,7 +294,7 @@ function stopRecording() {
           setTimeout(waitAndTryStop, 100);
         } else {
           // Превышено максимальное количество попыток
-          console.log("Giving up waiting for recording initialization");
+          console.log("Превышено время ожидания инициализации записи");
           cleanupRecordingResources();
         }
       };
@@ -286,7 +306,7 @@ function stopRecording() {
     
     // Если медиа-рекордер не создан, просто очищаем ресурсы
     if (!mediaRecorder) {
-      console.log("MediaRecorder not initialized, cleaning up resources");
+      console.log("MediaRecorder не инициализирован, очищаем ресурсы");
       cleanupRecordingResources();
       return;
     }
@@ -294,7 +314,7 @@ function stopRecording() {
     // Нормальная остановка записи
     actuallyStopRecording();
   } catch (error) {
-    console.error("Error in stopRecording function:", error);
+    console.error("Ошибка в функции stopRecording:", error);
     cleanupRecordingResources();
   }
 }
@@ -315,13 +335,13 @@ function actuallyStopRecording() {
           cleanupRecordingResources();
 
           console.log(
-            `Recording fully stopped, microphone released. Audio size: ${audioSize} bytes, Duration: ${duration}s, Format: ${audioBlob.type}`
+            `Запись полностью остановлена, микрофон освобожден. Размер аудио: ${audioSize} байт, Длительность: ${duration}с, Формат: ${audioBlob.type}`
           );
 
           // Передаём файл в функцию отправки
           sendToServer(audioBlob);
         } catch (innerError) {
-          console.error("Error in onstop handler:", innerError);
+          console.error("Ошибка в обработчике остановки записи:", innerError);
           cleanupRecordingResources();
         }
       };
@@ -329,7 +349,7 @@ function actuallyStopRecording() {
       cleanupRecordingResources();
     }
   } catch (err) {
-    console.error("Error in actuallyStopRecording:", err);
+    console.error("Ошибка в функции actuallyStopRecording:", err);
     cleanupRecordingResources();
   }
 }
@@ -347,9 +367,9 @@ function cleanupRecordingResources() {
     mediaRecorder = null;
     audioChunks = [];
     
-    console.log("Recording resources cleaned up");
+    console.log("Ресурсы записи очищены");
   } catch (err) {
-    console.error("Error cleaning up resources:", err);
+    console.error("Ошибка при очистке ресурсов:", err);
     // В любом случае сбрасываем переменные
     audioStream = null;
     mediaRecorder = null;
@@ -359,7 +379,7 @@ function cleanupRecordingResources() {
 
 // Функция для отправки и воспроизведения записи
 function sendToServer(audioBlob) {
-  console.log(`Sending audio to server: ${audioBlob.size} bytes, Format: ${audioBlob.type}`);
+  console.log(`Отправка аудио на сервер: ${audioBlob.size} байт, Формат: ${audioBlob.type}`);
   
   // Если включена отладка звука, воспроизводим запись
   if (settings.debugAudio === 'true') {
@@ -872,7 +892,7 @@ document.addEventListener("keydown", (event) => {
 
   if (event.key !== targetKey) {
     if (state !== States.IDLE) {
-      console.log(`Non-target key pressed: ${event.key}, Resetting to Idle`);
+      console.log(`Нажата не целевая клавиша: ${event.key}, Сброс в Idle`);
       if (state === States.HELD) {
         stopRecording();
       }
@@ -886,19 +906,19 @@ document.addEventListener("keydown", (event) => {
       state = States.PRESSED;
       currentKey = event.key;
       lastTime = currentTime;
-      console.log(`Keydown: ${event.key} (Pressed)`);
+      console.log(`Нажатие: ${event.key} (Pressed)`);
       break;
 
     case States.RELEASED:
       if (currentTime - lastKeyUpTime <= doublePressThreshold) {
         state = States.HELD;
         lastTime = currentTime;
-        console.log(`Keydown: ${event.key} (Held - Double Press Detected)`);
+        console.log(`Нажатие: ${event.key} (Удержание - Обнаружено двойное нажатие)`);
         startRecording();
       } else {
         state = States.PRESSED;
         lastTime = currentTime;
-        console.log(`Keydown: ${event.key} (Pressed - Too slow)`);
+        console.log(`Нажатие: ${event.key} (Pressed - Слишком медленно)`);
       }
       break;
 
@@ -917,7 +937,7 @@ document.addEventListener("keyup", (event) => {
 
   if (event.key !== targetKey) {
     if (state !== States.IDLE) {
-      console.log(`Non-target key released: ${event.key}, Resetting to Idle`);
+      console.log(`Отпущена не целевая клавиша: ${event.key}, Сброс в Idle`);
       if (state === States.HELD) {
         stopRecording();
       }
@@ -932,13 +952,13 @@ document.addEventListener("keyup", (event) => {
         state = States.RELEASED;
         lastKeyUpTime = keyUpTime;
         const duration = (keyUpTime - lastTime).toFixed(2);
-        console.log(`Keyup: ${event.key}, Время удержания: ${duration}ms (Released)`);
+        console.log(`Отпускание: ${event.key}, Время удержания: ${duration}мс (Released)`);
         break;
 
       case States.HELD:
         state = States.IDLE;
         const heldDuration = (keyUpTime - lastTime).toFixed(2);
-        console.log(`Keyup: ${event.key}, Время удержания в Held: ${heldDuration}ms`);
+        console.log(`Отпускание: ${event.key}, Время удержания в Held: ${heldDuration}мс`);
         stopRecording();
         resetToIdle();
         break;
