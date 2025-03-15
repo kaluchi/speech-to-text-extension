@@ -315,7 +315,7 @@ async function checkApiKey() {
     });
 
     // Если ключ пустой или некорректный
-    if (!apiKey || !apiKey.startsWith('sk_')) {
+    if (!apiKey || !apiKey.startsWith('sk_') || apiKey.length < 32) {
       console.log('API ключ отсутствует или некорректен, открываем настройки');
       
       // Отправляем сообщение фоновой странице для открытия настроек

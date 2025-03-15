@@ -33,9 +33,23 @@
       border-radius: 4px;
       box-sizing: border-box;
       font-size: 14px;
+      transition: all 0.3s ease;
+    }
+    input[type="text"]:focus {
+      outline: none;
+      border-color: #4CAF50;
+      box-shadow: 0 0 5px rgba(76, 175, 80, 0.3);
+    }
+    input[type="text"].error {
+      border-color: #f44336;
+      background-color: #fff8f8;
+    }
+    input[type="text"].error:focus {
+      box-shadow: 0 0 5px rgba(244, 67, 54, 0.3);
     }
     .api-key-container {
       position: relative;
+      margin-bottom: 5px;
     }
     .toggle-visibility {
       position: absolute;
@@ -124,6 +138,15 @@
       border-radius: 4px;
       cursor: pointer;
       margin-top: 10px;
+    }
+    .api-key-error {
+      color: #f44336;
+      font-size: 12px;
+      margin-top: 5px;
+      display: none;
+    }
+    .api-key-error.visible {
+      display: block;
     }
   </style>
 </head>

@@ -1,6 +1,6 @@
 // Дефолтные настройки
 const DEFAULT_SETTINGS = {
-  apiKey: 'sk_58679ae6974e4b0f24f6a3d7e116d7159af6d56f4c16102a',
+  apiKey: '',
   languageCode: 'ru',
   tagAudioEvents: 'false',
   timestampsGranularity: 'word',
@@ -30,6 +30,72 @@ const preferredMicrophoneSelect = document.getElementById('preferred-microphone'
 
 // Текущие настройки
 let currentSettings = {...DEFAULT_SETTINGS};
+
+// Функция для валидации API ключа
+async function validateApiKey() {
+  const apiKey = apiKeyInput.value.trim();
+  
+  // Сбрасываем стили
+  apiKeyInput.style.border = '1px solid #ddd';
+  apiKeyInput.style.backgroundColor = '';
+  
+  if (!apiKey) {
+    showInvalidApiKey('API ключ не может быть пустым');
+    return false;
+  }
+  
+  if (!apiKey.startsWith('sk_')) {
+    showInvalidApiKey('API ключ должен начинаться с "sk_"');
+    return false;
+  }
+  
+  // Здесь можно добавить дополнительные проверки формата ключа
+  if (apiKey.length < 32) {
+    showInvalidApiKey('API ключ слишком короткий');
+    return false;
+  }
+  
+  return true;
+}
+
+// Функция для отображения ошибки API ключа
+function showInvalidApiKey(message) {
+  // Сначала показываем поле, если оно скрыто
+  if (apiKeyInput.type === 'password') {
+    toggleApiKeyVisibility();
+  }
+  
+  // Устанавливаем стили с небольшой задержкой
+  setTimeout(() => {
+    apiKeyInput.style.border = '2px solid #f44336';
+    apiKeyInput.style.backgroundColor = '#fff8f8';
+    showStatus(message, 'error');
+    
+    // Фокусируемся на поле и выделяем текст
+    apiKeyInput.focus();
+    apiKeyInput.select();
+    
+    // Добавляем эффект встряхивания
+    apiKeyInput.classList.add('shake');
+    setTimeout(() => {
+      apiKeyInput.classList.remove('shake');
+    }, 500);
+  }, 100); // Небольшая задержка для лучшего UX
+}
+
+// Добавляем стили для анимации встряхивания
+const style = document.createElement('style');
+style.textContent = `
+  @keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-10px); }
+    75% { transform: translateX(10px); }
+  }
+  .shake {
+    animation: shake 0.5s ease-in-out;
+  }
+`;
+document.head.appendChild(style);
 
 // Функция для создания элемента ключевого слова
 function createKeywordElement(keyword = '', bias = 0) {
@@ -70,9 +136,9 @@ function createKeywordElement(keyword = '', bias = 0) {
 }
 
 // Функция для загрузки настроек из хранилища
-function loadSettings() {
+async function loadSettings() {
   try {
-    chrome.storage.sync.get(DEFAULT_SETTINGS, (items) => {
+    chrome.storage.sync.get(DEFAULT_SETTINGS, async (items) => {
       if (chrome.runtime.lastError) {
         console.error("Ошибка при загрузке настроек:", chrome.runtime.lastError);
         showStatus('Ошибка при загрузке настроек!', 'error');
@@ -112,8 +178,11 @@ function loadSettings() {
       
       // Обновляем видимость кнопки сброса
       updateResetButtonVisibility();
-      requestMicrophonePermission();
-
+      
+      // Проверяем API ключ
+      if (!currentSettings.apiKey || !currentSettings.apiKey.startsWith('sk_')) {
+        showInvalidApiKey('Требуется указать действительный API ключ ElevenLabs');
+      }
       
       console.log("Настройки успешно загружены");
     });
@@ -214,6 +283,11 @@ function toggleApiKeyVisibility() {
   if (apiKeyInput.type === 'password') {
     apiKeyInput.type = 'text';
     toggleVisibilityButton.textContent = 'Скрыть';
+    // Устанавливаем фокус после показа поля
+    setTimeout(() => {
+      apiKeyInput.focus();
+      apiKeyInput.select();
+    }, 100);
   } else {
     apiKeyInput.type = 'password';
     toggleVisibilityButton.textContent = 'Показать';
@@ -249,17 +323,16 @@ function updateResetButtonVisibility() {
 // Функция для автоматического сохранения при изменении настроек
 function setupAutoSave() {
   // Для каждого элемента управления добавляем обработчик события изменения
-  apiKeyInput.addEventListener('input', () => {
-    // Валидация API ключа (простая проверка формата)
-    const value = apiKeyInput.value.trim();
-    if (value && !value.startsWith('sk_')) {
-      apiKeyInput.setCustomValidity('API ключ ElevenLabs должен начинаться с "sk_"');
-    } else {
-      apiKeyInput.setCustomValidity('');
-    }
+  apiKeyInput.addEventListener('input', async () => {
+    // Сбрасываем стили при начале ввода
+    apiKeyInput.style.border = '1px solid #ddd';
+    apiKeyInput.style.backgroundColor = '';
+    
+    // Валидация API ключа
+    const isValid = await validateApiKey();
     
     // Если ключ валидный, сохраняем настройки
-    if (apiKeyInput.validity.valid) {
+    if (isValid) {
       saveSettings();
     }
   });
@@ -343,10 +416,11 @@ async function requestMicrophonePermission() {
 navigator.mediaDevices.addEventListener('devicechange', updateMicrophoneList);
 
 // Инициализация при загрузке страницы
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
   loadSettings();
   setupAutoSave();
-
+  await requestMicrophonePermission();
+  await validateApiKey();
 });
 
 resetButton.addEventListener('click', resetSettings);
