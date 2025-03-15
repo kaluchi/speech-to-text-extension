@@ -8,7 +8,8 @@ const DEFAULT_SETTINGS = {
   numSpeakers: '',
   biasedKeywords: [],
   debugAudio: 'false',
-  preferredMicrophoneId: ''
+  preferredMicrophoneId: '',
+  showRecordingMask: 'true'
 };
 
 // DOM элементы
@@ -19,6 +20,7 @@ const timestampsGranularitySelect = document.getElementById('timestamps-granular
 const diarizeSelect = document.getElementById('diarize');
 const numSpeakersInput = document.getElementById('num-speakers');
 const debugAudioSelect = document.getElementById('debug-audio');
+const showRecordingMaskSelect = document.getElementById('show-recording-mask');
 const keywordsContainer = document.getElementById('keywords-container');
 const addKeywordButton = document.getElementById('add-keyword');
 const resetButton = document.getElementById('reset-btn');
@@ -87,7 +89,8 @@ function loadSettings() {
         numSpeakers: items.numSpeakers || DEFAULT_SETTINGS.numSpeakers,
         biasedKeywords: items.biasedKeywords || DEFAULT_SETTINGS.biasedKeywords,
         debugAudio: items.debugAudio || DEFAULT_SETTINGS.debugAudio,
-        preferredMicrophoneId: items.preferredMicrophoneId || DEFAULT_SETTINGS.preferredMicrophoneId
+        preferredMicrophoneId: items.preferredMicrophoneId || DEFAULT_SETTINGS.preferredMicrophoneId,
+        showRecordingMask: items.showRecordingMask || DEFAULT_SETTINGS.showRecordingMask
       };
       
       // Заполняем поля формы
@@ -98,6 +101,7 @@ function loadSettings() {
       diarizeSelect.value = currentSettings.diarize;
       numSpeakersInput.value = currentSettings.numSpeakers;
       debugAudioSelect.value = currentSettings.debugAudio;
+      showRecordingMaskSelect.value = currentSettings.showRecordingMask;
 
       // Очищаем и заполняем контейнер ключевых слов
       keywordsContainer.innerHTML = '';
@@ -142,6 +146,7 @@ function saveSettings() {
   const numSpeakers = numSpeakersInput.value;
   const debugAudio = debugAudioSelect.value;
   const preferredMicrophoneId = preferredMicrophoneSelect.value;
+  const showRecordingMask = showRecordingMaskSelect.value;
   const biasedKeywords = collectKeywords();
   
   // Обновляем текущие настройки
@@ -154,7 +159,8 @@ function saveSettings() {
     numSpeakers,
     biasedKeywords,
     debugAudio,
-    preferredMicrophoneId
+    preferredMicrophoneId,
+    showRecordingMask
   };
   
   chrome.storage.sync.set(currentSettings, () => {
@@ -181,6 +187,7 @@ function resetSettings() {
   numSpeakersInput.value = DEFAULT_SETTINGS.numSpeakers;
   debugAudioSelect.value = DEFAULT_SETTINGS.debugAudio;
   preferredMicrophoneSelect.value = DEFAULT_SETTINGS.preferredMicrophoneId;
+  showRecordingMaskSelect.value = DEFAULT_SETTINGS.showRecordingMask;
   
   // Очищаем ключевые слова
   keywordsContainer.innerHTML = '';
@@ -225,7 +232,8 @@ function areSettingsDifferent() {
     debugAudioSelect.value !== DEFAULT_SETTINGS.debugAudio ||
     currentSettings.biasedKeywords.length !== DEFAULT_SETTINGS.biasedKeywords.length ||
     currentSettings.biasedKeywords.some((item, index) => item !== DEFAULT_SETTINGS.biasedKeywords[index]) ||
-    currentSettings.preferredMicrophoneId !== DEFAULT_SETTINGS.preferredMicrophoneId
+    currentSettings.preferredMicrophoneId !== DEFAULT_SETTINGS.preferredMicrophoneId ||
+    currentSettings.showRecordingMask !== DEFAULT_SETTINGS.showRecordingMask
   );
 }
 
@@ -264,6 +272,7 @@ function setupAutoSave() {
   numSpeakersInput.addEventListener('change', saveSettings);
   debugAudioSelect.addEventListener('change', saveSettings);
   preferredMicrophoneSelect.addEventListener('change', saveSettings);
+  showRecordingMaskSelect.addEventListener('change', saveSettings);
 }
 
 // Добавляем обработчик для кнопки добавления ключевого слова

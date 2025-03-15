@@ -67,7 +67,8 @@ let settings = {
   diarize: 'false',
   numSpeakers: null,
   biasedKeywords: [],
-  debugAudio: 'false'
+  debugAudio: 'false',
+  showRecordingMask: 'true'
 };
 
 // Загружаем настройки из хранилища при запуске
@@ -81,7 +82,8 @@ function loadSettings() {
       diarize: 'false',
       numSpeakers: null,
       biasedKeywords: [],
-      debugAudio: 'false'
+      debugAudio: 'false',
+      showRecordingMask: 'true'
     }, (items) => {
       settings = items;
       console.log("Настройки загружены:", JSON.stringify({
@@ -92,7 +94,8 @@ function loadSettings() {
         diarize: settings.diarize,
         numSpeakers: settings.numSpeakers,
         biasedKeywords: settings.biasedKeywords,
-        debugAudio: settings.debugAudio
+        debugAudio: settings.debugAudio,
+        showRecordingMask: settings.showRecordingMask
       }));
     });
   } catch (error) {
@@ -132,6 +135,9 @@ try {
         if (changes.debugAudio) {
           settings.debugAudio = changes.debugAudio.newValue;
         }
+        if (changes.showRecordingMask) {
+          settings.showRecordingMask = changes.showRecordingMask.newValue;
+        }
         console.log("Настройки обновлены:", JSON.stringify({
           apiKeyLength: settings.apiKey ? settings.apiKey.length : 0,
           languageCode: settings.languageCode,
@@ -140,7 +146,8 @@ try {
           diarize: settings.diarize,
           numSpeakers: settings.numSpeakers,
           biasedKeywords: settings.biasedKeywords,
-          debugAudio: settings.debugAudio
+          debugAudio: settings.debugAudio,
+          showRecordingMask: settings.showRecordingMask
         }));
       }
     });
@@ -219,10 +226,93 @@ window.addEventListener('blur', () => {
   
 });
 
+// Функция для создания и отображения маски записи
+function showRecordingMask() {
+  try {
+    // Проверяем настройку отображения маски
+    if (settings.showRecordingMask === 'false') {
+      console.log('Отображение маски записи отключено в настройках');
+      return;
+    }
+
+    // Проверяем, существует ли уже маска
+    let mask = document.getElementById('recording-mask');
+    if (!mask) {
+      mask = document.createElement('div');
+      mask.id = 'recording-mask';
+      mask.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(255, 255, 0, 0.15);
+        z-index: 2147483647;
+        pointer-events: none;
+        opacity: 0;
+        transition: all 0.3s ease;
+      `;
+      document.body.appendChild(mask);
+      
+      // Даем браузеру время на добавление элемента перед анимацией
+      requestAnimationFrame(() => {
+        mask.style.opacity = '1';
+      });
+    }
+  } catch (error) {
+    console.error('Ошибка при создании маски записи:', error);
+  }
+}
+
+// Функция для изменения цвета маски на зеленый
+function changeMaskToGreen() {
+  try {
+    // Проверяем настройку отображения маски
+    if (settings.showRecordingMask === 'false') {
+      return;
+    }
+
+    const mask = document.getElementById('recording-mask');
+    if (mask) {
+      mask.style.backgroundColor = 'rgba(0, 255, 0, 0.15)';
+    }
+  } catch (error) {
+    console.error('Ошибка при изменении цвета маски:', error);
+  }
+}
+
+// Функция для удаления маски записи
+function hideRecordingMask() {
+  try {
+    // Проверяем настройку отображения маски
+    if (settings.showRecordingMask === 'false') {
+      return;
+    }
+
+    const mask = document.getElementById('recording-mask');
+    if (mask) {
+      // Плавно скрываем маску
+      mask.style.opacity = '0';
+      
+      // Удаляем элемент после завершения анимации
+      setTimeout(() => {
+        if (mask && mask.parentNode) {
+          mask.parentNode.removeChild(mask);
+        }
+      }, 300);
+    }
+  } catch (error) {
+    console.error('Ошибка при удалении маски записи:', error);
+  }
+}
+
 // Функция начала записи аудио
 async function startRecording() {
   const startTime = performance.now();
   try {
+    // Показываем маску в начале записи
+    showRecordingMask();
+    
     // Устанавливаем флаг, что запись инициализируется
     isRecordingInitializing = true;
     createMediaRecorderAllowed = true;
@@ -360,8 +450,13 @@ async function startRecording() {
         isRecordingInitializing = false;
       };
       
+      
       // просим присылать фрагменты каждые 1000 миллисекунд
-      mediaRecorder.start(1000);
+      mediaRecorder.start(100);
+      
+      // Меняем цвет маски на зеленый после успешного запуска MediaRecorder
+      changeMaskToGreen();
+   
       console.log(`Время создания и запуска MediaRecorder: ${(performance.now() - recorderStartTime).toFixed(1)}мс`);
       console.log(`Запись начата в формате: ${mediaRecorder.mimeType}`);
       
@@ -379,6 +474,9 @@ async function startRecording() {
     console.error("Ошибка при запуске записи:", err);
     console.log(`Время до возникновения ошибки: ${(performance.now() - startTime).toFixed(1)}мс`);
     
+    // Скрываем маску при ошибке
+    hideRecordingMask();
+    
     // Освобождаем ресурсы в случае ошибки
     if (audioStream) {
       audioStream.getTracks().forEach(track => track.stop());
@@ -395,6 +493,9 @@ async function startRecording() {
 // Функция остановки записи аудио
 function stopRecording() {
   try {
+    // Скрываем маску при остановке записи
+    hideRecordingMask();
+    
     // Если инициализация все еще продолжается, подождем немного
     if (isRecordingInitializing) {
       console.log("Инициализация записи в процессе, ожидаем безопасной остановки...");
@@ -434,6 +535,8 @@ function stopRecording() {
     actuallyStopRecording();
   } catch (error) {
     console.error("Ошибка в функции stopRecording:", error);
+    // Скрываем маску при ошибке
+    hideRecordingMask();
     cleanupRecordingResources();
   }
 }
