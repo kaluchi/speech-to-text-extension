@@ -7,7 +7,8 @@ const DEFAULT_SETTINGS = {
   diarize: 'false',
   numSpeakers: '',
   biasedKeywords: [],
-  debugAudio: 'false'
+  debugAudio: 'false',
+  preferredMicrophoneId: ''
 };
 
 // DOM элементы
@@ -23,6 +24,7 @@ const addKeywordButton = document.getElementById('add-keyword');
 const resetButton = document.getElementById('reset-btn');
 const statusElement = document.getElementById('status');
 const toggleVisibilityButton = document.getElementById('toggle-visibility');
+const preferredMicrophoneSelect = document.getElementById('preferred-microphone');
 
 // Текущие настройки
 let currentSettings = {...DEFAULT_SETTINGS};
@@ -77,14 +79,15 @@ function loadSettings() {
       
       // Сохраняем текущие настройки
       currentSettings = {
-        apiKey: items.apiKey || 'sk_58679ae6974e4b0f24f6a3d7e116d7159af6d56f4c16102a',
-        languageCode: items.languageCode || 'ru',
-        tagAudioEvents: items.tagAudioEvents || 'false',
-        timestampsGranularity: items.timestampsGranularity || 'word',
-        diarize: items.diarize || 'false',
-        numSpeakers: items.numSpeakers || '',
-        biasedKeywords: items.biasedKeywords || [],
-        debugAudio: items.debugAudio || 'false'
+        apiKey: items.apiKey || DEFAULT_SETTINGS.apiKey,
+        languageCode: items.languageCode || DEFAULT_SETTINGS.languageCode,
+        tagAudioEvents: items.tagAudioEvents || DEFAULT_SETTINGS.tagAudioEvents,
+        timestampsGranularity: items.timestampsGranularity || DEFAULT_SETTINGS.timestampsGranularity,
+        diarize: items.diarize || DEFAULT_SETTINGS.diarize,
+        numSpeakers: items.numSpeakers || DEFAULT_SETTINGS.numSpeakers,
+        biasedKeywords: items.biasedKeywords || DEFAULT_SETTINGS.biasedKeywords,
+        debugAudio: items.debugAudio || DEFAULT_SETTINGS.debugAudio,
+        preferredMicrophoneId: items.preferredMicrophoneId || DEFAULT_SETTINGS.preferredMicrophoneId
       };
       
       // Заполняем поля формы
@@ -105,6 +108,8 @@ function loadSettings() {
       
       // Обновляем видимость кнопки сброса
       updateResetButtonVisibility();
+      requestMicrophonePermission();
+
       
       console.log("Настройки успешно загружены");
     });
@@ -136,6 +141,7 @@ function saveSettings() {
   const diarize = diarizeSelect.value;
   const numSpeakers = numSpeakersInput.value;
   const debugAudio = debugAudioSelect.value;
+  const preferredMicrophoneId = preferredMicrophoneSelect.value;
   const biasedKeywords = collectKeywords();
   
   // Обновляем текущие настройки
@@ -147,7 +153,8 @@ function saveSettings() {
     diarize,
     numSpeakers,
     biasedKeywords,
-    debugAudio
+    debugAudio,
+    preferredMicrophoneId
   };
   
   chrome.storage.sync.set(currentSettings, () => {
@@ -173,6 +180,7 @@ function resetSettings() {
   diarizeSelect.value = DEFAULT_SETTINGS.diarize;
   numSpeakersInput.value = DEFAULT_SETTINGS.numSpeakers;
   debugAudioSelect.value = DEFAULT_SETTINGS.debugAudio;
+  preferredMicrophoneSelect.value = DEFAULT_SETTINGS.preferredMicrophoneId;
   
   // Очищаем ключевые слова
   keywordsContainer.innerHTML = '';
@@ -216,7 +224,8 @@ function areSettingsDifferent() {
     numSpeakersInput.value !== DEFAULT_SETTINGS.numSpeakers ||
     debugAudioSelect.value !== DEFAULT_SETTINGS.debugAudio ||
     currentSettings.biasedKeywords.length !== DEFAULT_SETTINGS.biasedKeywords.length ||
-    currentSettings.biasedKeywords.some((item, index) => item !== DEFAULT_SETTINGS.biasedKeywords[index])
+    currentSettings.biasedKeywords.some((item, index) => item !== DEFAULT_SETTINGS.biasedKeywords[index]) ||
+    currentSettings.preferredMicrophoneId !== DEFAULT_SETTINGS.preferredMicrophoneId
   );
 }
 
@@ -254,6 +263,7 @@ function setupAutoSave() {
   diarizeSelect.addEventListener('change', saveSettings);
   numSpeakersInput.addEventListener('change', saveSettings);
   debugAudioSelect.addEventListener('change', saveSettings);
+  preferredMicrophoneSelect.addEventListener('change', saveSettings);
 }
 
 // Добавляем обработчик для кнопки добавления ключевого слова
@@ -272,10 +282,62 @@ numSpeakersInput.addEventListener('input', () => {
   if (value > 32) numSpeakersInput.value = 32;
 });
 
+// Функция для обновления списка микрофонов
+async function updateMicrophoneList() {
+  try {
+    console.log("Запрашиваем список устройств...");
+    const devices = await navigator.mediaDevices.enumerateDevices();
+    const audioInputs = devices.filter(device => device.kind === 'audioinput');
+    
+    // Сохраняем текущее значение
+    const currentValue = currentSettings.preferredMicrophoneId;
+    
+    // Очищаем список, оставляя только опцию "Не задано"
+    preferredMicrophoneSelect.innerHTML = '<option value="">Не задано</option>';
+    
+    // Добавляем найденные микрофоны
+    audioInputs.forEach(device => {
+      const option = document.createElement('option');
+      option.value = device.deviceId;
+      option.text = device.label || `Микрофон ${device.deviceId.slice(0, 8)}...`;
+      preferredMicrophoneSelect.appendChild(option);
+    });
+    
+    // Восстанавливаем выбранное значение, если оно существует в новом списке
+    if (currentValue && [...preferredMicrophoneSelect.options].some(opt => opt.value === currentValue)) {
+      preferredMicrophoneSelect.value = currentValue;
+    }
+    
+    console.log(`Найдено ${audioInputs.length} микрофонов`);
+  } catch (error) {
+    console.error("Ошибка при получении списка микрофонов:", error);
+    showStatus('Ошибка при получении списка микрофонов', 'error');
+  }
+}
+
+// Запрашиваем разрешение на доступ к микрофону при открытии настроек
+async function requestMicrophonePermission() {
+  try {
+    console.log("Запрашиваем разрешение на доступ к микрофону...");
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    stream.getTracks().forEach(track => track.stop());
+    
+    // После получения разрешения обновляем список микрофонов
+    await updateMicrophoneList();
+  } catch (error) {
+    console.error("Ошибка при запросе доступа к микрофону:", error);
+    showStatus('Требуется разрешение на доступ к микрофону', 'error');
+  }
+}
+
+// Добавляем слушатель изменений устройств
+navigator.mediaDevices.addEventListener('devicechange', updateMicrophoneList);
+
 // Инициализация при загрузке страницы
 document.addEventListener('DOMContentLoaded', () => {
   loadSettings();
   setupAutoSave();
+
 });
 
 resetButton.addEventListener('click', resetSettings);
