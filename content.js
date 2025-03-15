@@ -751,6 +751,58 @@ async function sendToElevenLabsAPI(audioBlob) {
   }
 }
 
+// Функция для копирования текста в буфер обмена
+async function copyToClipboard(text) {
+  try {
+    // Проверяем поддержку API
+    if (!navigator.clipboard) {
+      throw new Error('Clipboard API не поддерживается');
+    }
+
+    // Пробуем скопировать текст
+    await navigator.clipboard.writeText(text);
+    
+    // Показываем уведомление об успешном копировании
+    showCopyNotification('Текст скопирован в буфер обмена');
+    return true;
+  } catch (error) {
+    console.error('Ошибка при копировании в буфер обмена:', error);
+    
+    // Пробуем запасной метод через execCommand
+    try {
+      const textArea = document.createElement('textarea');
+      textArea.value = text;
+      textArea.style.cssText = 'position:fixed;top:0;left:0;opacity:0;';
+      document.body.appendChild(textArea);
+      textArea.focus();
+      textArea.select();
+      
+      const success = document.execCommand('copy');
+      document.body.removeChild(textArea);
+      
+      if (success) {
+        showCopyNotification('Текст скопирован в буфер обмена');
+        return true;
+      } else {
+        throw new Error('execCommand copy не сработал');
+      }
+    } catch (fallbackError) {
+      console.error('Ошибка при использовании запасного метода копирования:', fallbackError);
+      showCopyNotification('Не удалось скопировать текст', true);
+      return false;
+    }
+  }
+}
+
+// Функция для показа уведомления
+function showCopyNotification(message, isError = false) {
+  try {
+    console.log(message);
+  } catch (error) {
+    console.error('Ошибка при показе уведомления:', error);
+  }
+}
+
 // Функция для вставки распознанного текста с поддержкой отмены (Cmd+Z)
 function displayRecognizedText(text) {
   try {
@@ -973,12 +1025,13 @@ function displayRecognizedText(text) {
         }
       }
     } else {
-      // Если нет подходящего поля в фокусе, выводим в консоль
-      console.log('Распознанный текст (нет активного поля ввода):', text);
+      // Если нет подходящего поля в фокусе, копируем в буфер обмена
+      copyToClipboard(text);
     }
   } catch (err) {
-    console.error('Ошибка при вставке текста:', err);
-    console.log('Распознанный текст:', text);
+    console.error('Ошибка при обработке текста:', err);
+    // Пробуем скопировать в буфер обмена даже при ошибке
+    copyToClipboard(text);
   }
 }
 
