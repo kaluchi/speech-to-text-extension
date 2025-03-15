@@ -221,14 +221,113 @@ window.addEventListener('blur', () => {
 
 // Функция начала записи аудио
 async function startRecording() {
+  const startTime = performance.now();
   try {
     // Устанавливаем флаг, что запись инициализируется
     isRecordingInitializing = true;
     createMediaRecorderAllowed = true;
     
-    audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    // Получаем настройки микрофона
+    const settingsStartTime = performance.now();
+    const { preferredMicrophoneId } = await new Promise((resolve) => {
+      chrome.storage.sync.get({ preferredMicrophoneId: '' }, resolve);
+    });
+    console.log(`Время получения настроек: ${(performance.now() - settingsStartTime).toFixed(1)}мс`);
+
+    // Пробуем сначала использовать предпочитаемый микрофон, если он задан
+    const getUserMediaStartTime = performance.now();
+    if (preferredMicrophoneId) {
+      try {
+        console.log("Пробуем использовать предпочитаемый микрофон");
+        audioStream = await navigator.mediaDevices.getUserMedia({
+          audio: {
+            deviceId: { exact: preferredMicrophoneId },
+            autoGainControl: false,
+            echoCancellation: false,
+            noiseSuppression: false,
+            sampleRate: 22050,        // Уменьшаем частоту дискретизации
+            channelCount: 1           // Используем моно вместо стерео
+          }
+        });
+        console.log(`Время получения потока с предпочитаемого микрофона: ${(performance.now() - getUserMediaStartTime).toFixed(1)}мс`);
+        
+        // Анализируем полученный поток
+        const audioTrack = audioStream.getAudioTracks()[0];
+        const trackSettings = audioTrack.getSettings();
+        const trackCapabilities = audioTrack.getCapabilities();
+        console.log('Параметры аудиопотока:', {
+          deviceId: trackSettings.deviceId,
+          groupId: trackSettings.groupId,
+          sampleRate: trackSettings.sampleRate,
+          channelCount: trackSettings.channelCount,
+          autoGainControl: trackSettings.autoGainControl,
+          echoCancellation: trackSettings.echoCancellation,
+          noiseSuppression: trackSettings.noiseSuppression,
+          latency: trackSettings.latency,
+          время: `${(performance.now() - getUserMediaStartTime).toFixed(1)}мс`
+        });
+      } catch (err) {
+        const fallbackStartTime = performance.now();
+        console.log("Не удалось использовать предпочитаемый микрофон, пробуем микрофон по умолчанию:", err);
+        // Если не удалось использовать предпочитаемый микрофон, пробуем использовать любой доступный
+        audioStream = await navigator.mediaDevices.getUserMedia({ 
+          audio: {
+            autoGainControl: false,
+            echoCancellation: false,
+            noiseSuppression: false,
+            sampleRate: 22050,        // Уменьшаем частоту дискретизации
+            channelCount: 1           // Используем моно вместо стерео
+          } 
+        });
+        console.log(`Время получения потока с микрофона по умолчанию после ошибки: ${(performance.now() - fallbackStartTime).toFixed(1)}мс`);
+        
+        // Анализируем полученный поток после fallback
+        const audioTrack = audioStream.getAudioTracks()[0];
+        const trackSettings = audioTrack.getSettings();
+        const trackCapabilities = audioTrack.getCapabilities();
+        console.log('Параметры аудиопотока (fallback):', {
+          deviceId: trackSettings.deviceId,
+          groupId: trackSettings.groupId,
+          sampleRate: trackSettings.sampleRate,
+          channelCount: trackSettings.channelCount,
+          autoGainControl: trackSettings.autoGainControl,
+          echoCancellation: trackSettings.echoCancellation,
+          noiseSuppression: trackSettings.noiseSuppression,
+          latency: trackSettings.latency,
+          время: `${(performance.now() - fallbackStartTime).toFixed(1)}мс`
+        });
+      }
+    } else {
+      // Если предпочитаемый микрофон не задан, используем микрофон по умолчанию
+      audioStream = await navigator.mediaDevices.getUserMedia({ 
+        audio: {
+          autoGainControl: false,
+          echoCancellation: false,
+          noiseSuppression: false,
+          sampleRate: 22050,        // Уменьшаем частоту дискретизации
+          channelCount: 1           // Используем моно вместо стерео
+        } 
+      });
+      console.log(`Время получения потока с микрофона по умолчанию: ${(performance.now() - getUserMediaStartTime).toFixed(1)}мс`);
+      
+      // Анализируем полученный поток
+      const audioTrack = audioStream.getAudioTracks()[0];
+      const trackSettings = audioTrack.getSettings();
+      const trackCapabilities = audioTrack.getCapabilities();
+      console.log('Параметры аудиопотока (default):', {
+        deviceId: trackSettings.deviceId,
+        groupId: trackSettings.groupId,
+        sampleRate: trackSettings.sampleRate,
+        channelCount: trackSettings.channelCount,
+        autoGainControl: trackSettings.autoGainControl,
+        echoCancellation: trackSettings.echoCancellation,
+        noiseSuppression: trackSettings.noiseSuppression,
+        latency: trackSettings.latency,
+        время: `${(performance.now() - getUserMediaStartTime).toFixed(1)}мс`
+      });
+    }
     
-    // Проверяем флаг после получения разрешения, так как во время показа попапа фокус мог быть потерян
+    // Проверяем флаг после получения разрешения
     if (!createMediaRecorderAllowed) {
       console.log('Разрешение получено, но окно потеряло фокус. Прерываем создание MediaRecorder');
       // Освобождаем ресурсы
@@ -236,6 +335,7 @@ async function startRecording() {
       audioStream = null;
       isRecordingInitializing = false;
     } else {
+      const recorderStartTime = performance.now();
       // Выбираем поддерживаемый формат
       const mimeType = getSupportedMimeType();
       
@@ -252,13 +352,32 @@ async function startRecording() {
         // Инициализация завершена после получения первого фрагмента
         isRecordingInitializing = false;
       };
+      
+      // Добавляем обработчик ошибок
+      mediaRecorder.onerror = (event) => {
+        console.error("Ошибка MediaRecorder:", event.error);
+        cleanupRecordingResources();
+        isRecordingInitializing = false;
+      };
+      
       // просим присылать фрагменты каждые 1000 миллисекунд
       mediaRecorder.start(1000);
+      console.log(`Время создания и запуска MediaRecorder: ${(performance.now() - recorderStartTime).toFixed(1)}мс`);
       console.log(`Запись начата в формате: ${mediaRecorder.mimeType}`);
+      
+      // Логируем информацию о выбранном устройстве
+      const audioTrack = audioStream.getAudioTracks()[0];
+      if (audioTrack) {
+        const settings = audioTrack.getSettings();
+        console.log("Используется микрофон:", settings.deviceId, 
+                    "Метка:", audioTrack.label);
+      }
     }
 
+    console.log(`Общее время инициализации записи: ${(performance.now() - startTime).toFixed(1)}мс`);
   } catch (err) {
     console.error("Ошибка при запуске записи:", err);
+    console.log(`Время до возникновения ошибки: ${(performance.now() - startTime).toFixed(1)}мс`);
     
     // Освобождаем ресурсы в случае ошибки
     if (audioStream) {
@@ -808,6 +927,26 @@ function playRecording(audioBlob) {
     audio.src = audioUrl;
     audioContainer.appendChild(audio);
     
+    // Функция для безопасного удаления контейнера и освобождения ресурсов
+    const cleanup = () => {
+      URL.revokeObjectURL(audioUrl);
+      if (audioContainer && audioContainer.parentNode) {
+        audioContainer.remove();
+      }
+      // Удаляем все обработчики событий
+      audio.onended = null;
+      audio.onerror = null;
+      audio.onpause = null;
+    };
+
+    // Добавляем обработчики событий
+    audio.onended = cleanup;
+    audio.onerror = (error) => {
+      console.error('Ошибка воспроизведения аудио:', error);
+      cleanup();
+    };
+
+
     // Добавляем информацию о записи
     const infoDiv = document.createElement('div');
     infoDiv.textContent = `Формат: ${audioBlob.type}, Размер: ${(audioBlob.size / 1024).toFixed(1)} КБ`;
@@ -822,11 +961,6 @@ function playRecording(audioBlob) {
     
     // Автоматически воспроизводим
     audio.play().catch(err => console.log('Автоматическое воспроизведение не разрешено:', err));
-    
-    // Освобождаем ресурсы, когда URL больше не нужен
-    audio.onended = () => {
-      URL.revokeObjectURL(audioUrl);
-    };
   } catch (err) {
     console.error('Ошибка при воспроизведении записи:', err);
     // В случае ошибки предлагаем скачать файл
@@ -865,7 +999,7 @@ function createAudioContainer() {
   try {
     const container = document.createElement('div');
     container.id = 'audio-container';
-    container.style.cssText = 'margin: 20px; padding: 10px; border: 1px solid #ccc; border-radius: 5px;';
+    container.style.cssText = 'margin: 20px; padding: 10px; border: 1px solid #ccc; border-radius: 5px; display: none;';
     
     // Проверяем, можем ли мы добавить контейнер в body
     if (document.body) {
@@ -1000,8 +1134,33 @@ async function checkMicrophonePermission() {
     // Запрашиваем доступ к микрофону
     const stream = await navigator.mediaDevices.getUserMedia({audio: true});
     
+    // Получаем список всех медиа устройств
+    const devices = await navigator.mediaDevices.enumerateDevices();
+    const audioDevices = devices.filter(device => device.kind === 'audioinput');
+    
+    console.log('=== Доступные аудио устройства ===');
+    audioDevices.forEach((device, index) => {
+      console.log(`Устройство ${index + 1}:`, {
+        id: device.deviceId,
+        label: device.label,
+        groupId: device.groupId,
+        kind: device.kind
+      });
+    });
+    console.log('===============================');
+    
     // Если успешно, сразу освобождаем ресурсы
-    stream.getTracks().forEach(track => track.stop());
+    stream.getTracks().forEach(track => {
+      console.log('Параметры аудио трека:', {
+        label: track.label,
+        id: track.id,
+        enabled: track.enabled,
+        muted: track.muted,
+        readyState: track.readyState,
+        constraints: track.getConstraints()
+      });
+      track.stop();
+    });
     
     return {
       hasAccess: true
