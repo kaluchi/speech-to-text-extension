@@ -306,12 +306,50 @@ function hideRecordingMask() {
   }
 }
 
+// Функция для проверки API ключа
+async function checkApiKey() {
+  try {
+    // Получаем API ключ из настроек
+    const { apiKey } = await new Promise((resolve) => {
+      chrome.storage.sync.get({ apiKey: '' }, resolve);
+    });
+
+    // Если ключ пустой или некорректный
+    if (!apiKey || !apiKey.startsWith('sk_')) {
+      console.log('API ключ отсутствует или некорректен, открываем настройки');
+      
+      // Отправляем сообщение фоновой странице для открытия настроек
+      chrome.runtime.sendMessage({ command: 'openOptionsPage' }, (response) => {
+        if (chrome.runtime.lastError) {
+          console.error('Ошибка при отправке сообщения:', chrome.runtime.lastError);
+        } else if (response && response.success) {
+          console.log('Страница настроек открыта');
+        }
+      });
+      
+      return false;
+    }
+    
+    return true;
+  } catch (error) {
+    console.error('Ошибка при проверке API ключа:', error);
+    return false;
+  }
+}
+
 // Функция начала записи аудио
 async function startRecording() {
   const startTime = performance.now();
   try {
     // Показываем маску в начале записи
     showRecordingMask();
+    
+    // Проверяем API ключ перед началом записи
+    if (!await checkApiKey()) {
+      console.log('Запись отменена из-за отсутствия API ключа');
+      hideRecordingMask();
+      return;
+    }
     
     // Устанавливаем флаг, что запись инициализируется
     isRecordingInitializing = true;
