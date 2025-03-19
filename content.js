@@ -615,7 +615,7 @@ function actuallyStopRecording() {
 }
 
 // Default audio detection threshold - lowered for better sensitivity
-const DEFAULT_SILENCE_THRESHOLD = 0.002; // Reduced from 0.01 to detect quieter sounds
+const DEFAULT_SILENCE_THRESHOLD = 0.001; // Reduced from 0.01 to detect quieter sounds
 
 /**
  * Checks if the audio data contains actual sound above the silence threshold
