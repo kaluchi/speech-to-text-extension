@@ -1,0 +1,10 @@
+{
+  "extension_name": {
+    "message": "Voice Input with ElevenLabs",
+    "description": "The name of the extension"
+  },
+  "extension_description": {
+    "message": "Double press Cmd/Ctrl to activate sound recording and convert to text with ElevenLabs API",
+    "description": "The description of the extension"
+  }
+}

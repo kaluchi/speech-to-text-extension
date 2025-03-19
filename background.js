@@ -1,7 +1,7 @@
-// Обработчик сообщений от content script
+// Message handler from content script
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.command === 'openOptionsPage') {
-    // Открываем страницу настроек
+    // Open the options page
     if (chrome.runtime.openOptionsPage) {
       chrome.runtime.openOptionsPage();
     } else {
@@ -9,6 +9,6 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     }
     sendResponse({ success: true });
   }
-  // Важно вернуть true для асинхронного ответа
+  // Important to return true for asynchronous response
   return true;
-}); 
+});

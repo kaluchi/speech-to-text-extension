@@ -1,6 +1,7 @@
-// Дефолтные настройки
+// Default settings
 const DEFAULT_SETTINGS = {
   apiKey: '',
+  interfaceLanguage: '', // Default to browser language
   languageCode: 'ru',
   tagAudioEvents: 'false',
   timestampsGranularity: 'word',
@@ -12,8 +13,9 @@ const DEFAULT_SETTINGS = {
   showRecordingMask: 'true'
 };
 
-// DOM элементы
+// DOM elements
 const apiKeyInput = document.getElementById('api-key');
+const interfaceLanguageSelect = document.getElementById('interface-language');
 const languageCodeSelect = document.getElementById('language-code');
 const tagAudioEventsSelect = document.getElementById('tag-audio-events');
 const timestampsGranularitySelect = document.getElementById('timestamps-granularity');
@@ -28,62 +30,62 @@ const statusElement = document.getElementById('status');
 const toggleVisibilityButton = document.getElementById('toggle-visibility');
 const preferredMicrophoneSelect = document.getElementById('preferred-microphone');
 
-// Текущие настройки
+// Current settings
 let currentSettings = {...DEFAULT_SETTINGS};
 
-// Функция для валидации API ключа
+// Function to validate API key
 async function validateApiKey() {
   const apiKey = apiKeyInput.value.trim();
   
-  // Сбрасываем стили
+  // Reset styles
   apiKeyInput.style.border = '1px solid #ddd';
   apiKeyInput.style.backgroundColor = '';
   
   if (!apiKey) {
-    showInvalidApiKey('API ключ не может быть пустым');
+    showInvalidApiKey(i18n.getTranslation('api_key_empty'));
     return false;
   }
   
   if (!apiKey.startsWith('sk_')) {
-    showInvalidApiKey('API ключ должен начинаться с "sk_"');
+    showInvalidApiKey(i18n.getTranslation('invalid_api_key_format'));
     return false;
   }
   
-  // Здесь можно добавить дополнительные проверки формата ключа
+  // Additional key format checks
   if (apiKey.length < 32) {
-    showInvalidApiKey('API ключ слишком короткий');
+    showInvalidApiKey(i18n.getTranslation('api_key_length_error'));
     return false;
   }
   
   return true;
 }
 
-// Функция для отображения ошибки API ключа
+// Function to display API key error
 function showInvalidApiKey(message) {
-  // Сначала показываем поле, если оно скрыто
+  // Show the field if it's hidden
   if (apiKeyInput.type === 'password') {
     toggleApiKeyVisibility();
   }
   
-  // Устанавливаем стили с небольшой задержкой
+  // Set styles with a slight delay
   setTimeout(() => {
     apiKeyInput.style.border = '2px solid #f44336';
     apiKeyInput.style.backgroundColor = '#fff8f8';
     showStatus(message, 'error');
     
-    // Фокусируемся на поле и выделяем текст
+    // Focus on the field and select text
     apiKeyInput.focus();
     apiKeyInput.select();
     
-    // Добавляем эффект встряхивания
+    // Add shake effect
     apiKeyInput.classList.add('shake');
     setTimeout(() => {
       apiKeyInput.classList.remove('shake');
     }, 500);
-  }, 100); // Небольшая задержка для лучшего UX
+  }, 100); // Small delay for better UX
 }
 
-// Добавляем стили для анимации встряхивания
+// Add styles for shake animation
 const style = document.createElement('style');
 style.textContent = `
   @keyframes shake {
@@ -97,14 +99,14 @@ style.textContent = `
 `;
 document.head.appendChild(style);
 
-// Функция для создания элемента ключевого слова
+// Function to create keyword element
 function createKeywordElement(keyword = '', bias = 0) {
   const keywordItem = document.createElement('div');
   keywordItem.className = 'keyword-item';
 
   const wordInput = document.createElement('input');
   wordInput.type = 'text';
-  wordInput.placeholder = 'Ключевое слово';
+  wordInput.placeholder = i18n.getTranslation('keyword_placeholder');
   wordInput.value = keyword;
   wordInput.maxLength = 50;
 
@@ -113,12 +115,12 @@ function createKeywordElement(keyword = '', bias = 0) {
   biasInput.min = -10;
   biasInput.max = 10;
   biasInput.step = 0.1;
-  biasInput.placeholder = 'Вес';
+  biasInput.placeholder = i18n.getTranslation('weight_placeholder');
   biasInput.value = bias;
 
   const removeButton = document.createElement('button');
   removeButton.className = 'remove-keyword';
-  removeButton.textContent = 'Удалить';
+  removeButton.textContent = i18n.getTranslation('remove');
   removeButton.onclick = () => {
     keywordItem.remove();
     saveSettings();
@@ -128,26 +130,27 @@ function createKeywordElement(keyword = '', bias = 0) {
   keywordItem.appendChild(biasInput);
   keywordItem.appendChild(removeButton);
 
-  // Добавляем обработчики для автосохранения
+  // Add handlers for auto-save
   wordInput.addEventListener('input', saveSettings);
   biasInput.addEventListener('input', saveSettings);
 
   return keywordItem;
 }
 
-// Функция для загрузки настроек из хранилища
+// Function to load settings from storage
 async function loadSettings() {
   try {
     chrome.storage.sync.get(DEFAULT_SETTINGS, async (items) => {
       if (chrome.runtime.lastError) {
-        console.error("Ошибка при загрузке настроек:", chrome.runtime.lastError);
-        showStatus('Ошибка при загрузке настроек!', 'error');
+        console.error("Error loading settings:", chrome.runtime.lastError);
+        showStatus(i18n.getTranslation('settings_load_error'), 'error');
         return;
       }
       
-      // Сохраняем текущие настройки
+      // Save current settings
       currentSettings = {
         apiKey: items.apiKey || DEFAULT_SETTINGS.apiKey,
+        interfaceLanguage: items.interfaceLanguage || DEFAULT_SETTINGS.interfaceLanguage,
         languageCode: items.languageCode || DEFAULT_SETTINGS.languageCode,
         tagAudioEvents: items.tagAudioEvents || DEFAULT_SETTINGS.tagAudioEvents,
         timestampsGranularity: items.timestampsGranularity || DEFAULT_SETTINGS.timestampsGranularity,
@@ -159,8 +162,17 @@ async function loadSettings() {
         showRecordingMask: items.showRecordingMask || DEFAULT_SETTINGS.showRecordingMask
       };
       
-      // Заполняем поля формы
+      // Fill form fields
       apiKeyInput.value = currentSettings.apiKey;
+      
+      // Set interface language if it exists
+      if (currentSettings.interfaceLanguage) {
+        i18n.setLanguage(currentSettings.interfaceLanguage);
+      }
+      
+      // Populate interface language dropdown
+      populateInterfaceLanguageDropdown();
+      
       languageCodeSelect.value = currentSettings.languageCode;
       tagAudioEventsSelect.value = currentSettings.tagAudioEvents;
       timestampsGranularitySelect.value = currentSettings.timestampsGranularity;
@@ -169,30 +181,52 @@ async function loadSettings() {
       debugAudioSelect.value = currentSettings.debugAudio;
       showRecordingMaskSelect.value = currentSettings.showRecordingMask;
 
-      // Очищаем и заполняем контейнер ключевых слов
+      // Clear and fill keywords container
       keywordsContainer.innerHTML = '';
       currentSettings.biasedKeywords.forEach(item => {
         const [word, bias] = item.split(':');
         keywordsContainer.appendChild(createKeywordElement(word, parseFloat(bias)));
       });
       
-      // Обновляем видимость кнопки сброса
+      // Apply translations to all elements
+      i18n.applyTranslations();
+      
+      // Update reset button visibility
       updateResetButtonVisibility();
       
-      // Проверяем API ключ
+      // Check API key
       if (!currentSettings.apiKey || !currentSettings.apiKey.startsWith('sk_')) {
-        showInvalidApiKey('Требуется указать действительный API ключ ElevenLabs');
+        showInvalidApiKey(i18n.getTranslation('api_key_required'));
       }
       
-      console.log("Настройки успешно загружены");
+      console.log("Settings loaded successfully");
     });
   } catch (error) {
-    console.error("Исключение при загрузке настроек:", error);
-    showStatus('Ошибка при загрузке настроек!', 'error');
+    console.error("Exception loading settings:", error);
+    showStatus(i18n.getTranslation('settings_load_error'), 'error');
   }
 }
 
-// Функция для сбора ключевых слов
+// Function to populate interface language dropdown
+function populateInterfaceLanguageDropdown() {
+  if (!interfaceLanguageSelect) return;
+  
+  // Clear existing options
+  interfaceLanguageSelect.innerHTML = '';
+  
+  // Add options for each available language
+  Object.entries(i18n.AVAILABLE_LANGUAGES).forEach(([code, name]) => {
+    const option = document.createElement('option');
+    option.value = code;
+    option.textContent = name;
+    interfaceLanguageSelect.appendChild(option);
+  });
+  
+  // Set current language as selected
+  interfaceLanguageSelect.value = i18n.getCurrentLanguage();
+}
+
+// Function to collect keywords
 function collectKeywords() {
   const keywords = [];
   keywordsContainer.querySelectorAll('.keyword-item').forEach(item => {
@@ -205,9 +239,10 @@ function collectKeywords() {
   return keywords;
 }
 
-// Функция для сохранения настроек в хранилище
+// Function to save settings to storage
 function saveSettings() {
   const apiKey = apiKeyInput.value.trim();
+  const interfaceLanguage = interfaceLanguageSelect.value;
   const languageCode = languageCodeSelect.value;
   const tagAudioEvents = tagAudioEventsSelect.value;
   const timestampsGranularity = timestampsGranularitySelect.value;
@@ -218,9 +253,10 @@ function saveSettings() {
   const showRecordingMask = showRecordingMaskSelect.value;
   const biasedKeywords = collectKeywords();
   
-  // Обновляем текущие настройки
+  // Update current settings
   currentSettings = {
     apiKey,
+    interfaceLanguage,
     languageCode,
     tagAudioEvents,
     timestampsGranularity,
@@ -234,21 +270,22 @@ function saveSettings() {
   
   chrome.storage.sync.set(currentSettings, () => {
     if (chrome.runtime.lastError) {
-      console.error("Ошибка при сохранении настроек:", chrome.runtime.lastError);
-      showStatus('Ошибка при сохранении настроек!', 'error');
+      console.error("Error saving settings:", chrome.runtime.lastError);
+      showStatus(i18n.getTranslation('settings_save_error'), 'error');
       return;
     }
     
-    showStatus('Настройки сохранены!', 'success');
+    showStatus(i18n.getTranslation('settings_saved'), 'success');
     
-    // Обновляем видимость кнопки сброса
+    // Update reset button visibility
     updateResetButtonVisibility();
   });
 }
 
-// Функция для сброса настроек к значениям по умолчанию
+// Function to reset settings to defaults
 function resetSettings() {
   apiKeyInput.value = DEFAULT_SETTINGS.apiKey;
+  // Don't reset interface language - let the user keep their language choice
   languageCodeSelect.value = DEFAULT_SETTINGS.languageCode;
   tagAudioEventsSelect.value = DEFAULT_SETTINGS.tagAudioEvents;
   timestampsGranularitySelect.value = DEFAULT_SETTINGS.timestampsGranularity;
@@ -258,16 +295,16 @@ function resetSettings() {
   preferredMicrophoneSelect.value = DEFAULT_SETTINGS.preferredMicrophoneId;
   showRecordingMaskSelect.value = DEFAULT_SETTINGS.showRecordingMask;
   
-  // Очищаем ключевые слова
+  // Clear keywords
   keywordsContainer.innerHTML = '';
   
-  // Вызываем сохранение, чтобы обновить хранилище
+  // Call save to update storage
   saveSettings();
   
-  showStatus('Настройки сброшены к значениям по умолчанию!', 'success');
+  showStatus(i18n.getTranslation('settings_reset'), 'success');
 }
 
-// Функция для отображения статуса
+// Function to display status
 function showStatus(message, type) {
   statusElement.textContent = message;
   statusElement.className = type;
@@ -278,23 +315,23 @@ function showStatus(message, type) {
   }, 3000);
 }
 
-// Функция для переключения видимости API ключа
+// Function to toggle API key visibility
 function toggleApiKeyVisibility() {
   if (apiKeyInput.type === 'password') {
     apiKeyInput.type = 'text';
-    toggleVisibilityButton.textContent = 'Скрыть';
-    // Устанавливаем фокус после показа поля
+    toggleVisibilityButton.textContent = i18n.getTranslation('hide_key');
+    // Set focus after showing the field
     setTimeout(() => {
       apiKeyInput.focus();
       apiKeyInput.select();
     }, 100);
   } else {
     apiKeyInput.type = 'password';
-    toggleVisibilityButton.textContent = 'Показать';
+    toggleVisibilityButton.textContent = i18n.getTranslation('show_key');
   }
 }
 
-// Функция для проверки, отличаются ли текущие настройки от дефолтных
+// Function to check if current settings differ from defaults
 function areSettingsDifferent() {
   return (
     apiKeyInput.value.trim() !== DEFAULT_SETTINGS.apiKey.trim() ||
@@ -311,7 +348,7 @@ function areSettingsDifferent() {
   );
 }
 
-// Функция для обновления видимости кнопки сброса
+// Function to update reset button visibility
 function updateResetButtonVisibility() {
   if (areSettingsDifferent()) {
     resetButton.style.display = 'inline-block';
@@ -320,24 +357,45 @@ function updateResetButtonVisibility() {
   }
 }
 
-// Функция для автоматического сохранения при изменении настроек
+// Function to set up auto-save for settings changes
 function setupAutoSave() {
-  // Для каждого элемента управления добавляем обработчик события изменения
+  // Add input handler for API key
   apiKeyInput.addEventListener('input', async () => {
-    // Сбрасываем стили при начале ввода
+    // Reset styles when typing starts
     apiKeyInput.style.border = '1px solid #ddd';
     apiKeyInput.style.backgroundColor = '';
     
-    // Валидация API ключа
+    // Validate API key
     const isValid = await validateApiKey();
     
-    // Если ключ валидный, сохраняем настройки
+    // If key is valid, save settings
     if (isValid) {
       saveSettings();
     }
   });
   
-  // Для селектов
+  // Interface language change handling
+  interfaceLanguageSelect.addEventListener('change', () => {
+    const newLang = interfaceLanguageSelect.value;
+    if (i18n.setLanguage(newLang)) {
+      i18n.applyTranslations();
+      
+      // Update toggle visibility button text
+      if (apiKeyInput.type === 'password') {
+        toggleVisibilityButton.textContent = i18n.getTranslation('show_key');
+      } else {
+        toggleVisibilityButton.textContent = i18n.getTranslation('hide_key');
+      }
+      
+      // Update placeholder texts that aren't handled by applyTranslations
+      updateDynamicTranslations();
+      
+      // Save the setting
+      saveSettings();
+    }
+  });
+  
+  // For selects
   languageCodeSelect.addEventListener('change', saveSettings);
   tagAudioEventsSelect.addEventListener('change', saveSettings);
   timestampsGranularitySelect.addEventListener('change', saveSettings);
@@ -348,80 +406,118 @@ function setupAutoSave() {
   showRecordingMaskSelect.addEventListener('change', saveSettings);
 }
 
-// Добавляем обработчик для кнопки добавления ключевого слова
+// Function to update dynamic translations
+function updateDynamicTranslations() {
+  // Update keyword placeholders
+  keywordsContainer.querySelectorAll('.keyword-item').forEach(item => {
+    const wordInput = item.querySelector('input[type="text"]');
+    const biasInput = item.querySelector('input[type="number"]');
+    const removeButton = item.querySelector('.remove-keyword');
+    
+    if (wordInput) wordInput.placeholder = i18n.getTranslation('keyword_placeholder');
+    if (biasInput) biasInput.placeholder = i18n.getTranslation('weight_placeholder');
+    if (removeButton) removeButton.textContent = i18n.getTranslation('remove');
+  });
+  
+  // Update numSpeakersInput placeholder
+  if (numSpeakersInput) {
+    numSpeakersInput.placeholder = i18n.getTranslation('num_speakers_placeholder');
+  }
+  
+  // Update addKeywordButton
+  if (addKeywordButton) {
+    addKeywordButton.textContent = i18n.getTranslation('add_keyword');
+  }
+}
+
+// Add event handler for add keyword button
 addKeywordButton.addEventListener('click', () => {
   if (keywordsContainer.children.length < 100) {
     keywordsContainer.appendChild(createKeywordElement());
   } else {
-    showStatus('Достигнут максимум ключевых слов (100)!', 'error');
+    showStatus(i18n.getTranslation('max_keywords'), 'error');
   }
 });
 
-// Добавляем валидацию для поля количества говорящих
+// Add validation for num speakers field
 numSpeakersInput.addEventListener('input', () => {
   const value = parseInt(numSpeakersInput.value);
   if (value < 1) numSpeakersInput.value = 1;
   if (value > 32) numSpeakersInput.value = 32;
 });
 
-// Функция для обновления списка микрофонов
+// Function to update microphone list
 async function updateMicrophoneList() {
   try {
-    console.log("Запрашиваем список устройств...");
+    console.log("Requesting device list...");
     const devices = await navigator.mediaDevices.enumerateDevices();
     const audioInputs = devices.filter(device => device.kind === 'audioinput');
     
-    // Сохраняем текущее значение
+    // Save current value
     const currentValue = currentSettings.preferredMicrophoneId;
     
-    // Очищаем список, оставляя только опцию "Не задано"
-    preferredMicrophoneSelect.innerHTML = '<option value="">Не задано</option>';
+    // Clear list, leaving only "Not specified" option
+    preferredMicrophoneSelect.innerHTML = `<option value="" data-i18n="not_specified">${i18n.getTranslation('not_specified')}</option>`;
     
-    // Добавляем найденные микрофоны
+    // Add found microphones
     audioInputs.forEach(device => {
       const option = document.createElement('option');
       option.value = device.deviceId;
-      option.text = device.label || `Микрофон ${device.deviceId.slice(0, 8)}...`;
+      option.text = device.label || `Mic ${device.deviceId.slice(0, 8)}...`;
       preferredMicrophoneSelect.appendChild(option);
     });
     
-    // Восстанавливаем выбранное значение, если оно существует в новом списке
+    // Restore selected value if it exists in the new list
     if (currentValue && [...preferredMicrophoneSelect.options].some(opt => opt.value === currentValue)) {
       preferredMicrophoneSelect.value = currentValue;
     }
     
-    console.log(`Найдено ${audioInputs.length} микрофонов`);
+    console.log(`Found ${audioInputs.length} microphones`);
   } catch (error) {
-    console.error("Ошибка при получении списка микрофонов:", error);
-    showStatus('Ошибка при получении списка микрофонов', 'error');
+    console.error("Error getting microphone list:", error);
+    showStatus(i18n.getTranslation('mic_list_error'), 'error');
   }
 }
 
-// Запрашиваем разрешение на доступ к микрофону при открытии настроек
+// Request microphone permission when opening settings
 async function requestMicrophonePermission() {
   try {
-    console.log("Запрашиваем разрешение на доступ к микрофону...");
+    console.log("Requesting microphone permission...");
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
     stream.getTracks().forEach(track => track.stop());
     
-    // После получения разрешения обновляем список микрофонов
+    // Update microphone list after permission
     await updateMicrophoneList();
   } catch (error) {
-    console.error("Ошибка при запросе доступа к микрофону:", error);
-    showStatus('Требуется разрешение на доступ к микрофону', 'error');
+    console.error("Error requesting microphone access:", error);
+    showStatus(i18n.getTranslation('mic_permission_error'), 'error');
   }
 }
 
-// Добавляем слушатель изменений устройств
+// Add device change listener
 navigator.mediaDevices.addEventListener('devicechange', updateMicrophoneList);
 
-// Инициализация при загрузке страницы
+// Initialize when page loads
 document.addEventListener('DOMContentLoaded', async () => {
-  loadSettings();
-  setupAutoSave();
-  await requestMicrophonePermission();
-  await validateApiKey();
+  // First initialize i18n
+  i18n.loadLanguageSetting(async () => {
+    // Then load settings and apply translations
+    await loadSettings();
+    
+    // Setup auto-save functionality
+    setupAutoSave();
+    
+    // Request microphone permission and populate list
+    await requestMicrophonePermission();
+    
+    // Validate API key
+    await validateApiKey();
+    
+    // Update dynamic translations to ensure placeholders are correct
+    updateDynamicTranslations();
+  });
 });
 
+// Event listeners
 resetButton.addEventListener('click', resetSettings);
 toggleVisibilityButton.addEventListener('click', toggleApiKeyVisibility);

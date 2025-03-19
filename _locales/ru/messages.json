@@ -1,0 +1,10 @@
+{
+  "extension_name": {
+    "message": "Голосовой ввод с ElevenLabs",
+    "description": "Название расширения"
+  },
+  "extension_description": {
+    "message": "Двойное нажатие Cmd/Ctrl активирует запись звука и преобразование в текст с ElevenLabs API",
+    "description": "Описание расширения"
+  }
+}

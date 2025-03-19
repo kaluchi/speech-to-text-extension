@@ -1,8 +1,8 @@
 <!DOCTYPE html>
-<html>
+<html data-i18n-title="popup_title">
 <head>
   <meta charset="utf-8">
-  <title>Голосовой ввод с ElevenLabs</title>
+  <title>Voice Input with ElevenLabs</title>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -96,33 +96,35 @@
   </style>
 </head>
 <body>
-  <h1>Голосовой ввод с ElevenLabs</h1>
+  <h1 data-i18n="popup_title">Voice Input with ElevenLabs</h1>
   
-  <div class="description">
-    Расширение позволяет использовать распознавание речи через ElevenLabs API для голосового ввода текста в любое текстовое поле на веб-странице.
+  <div class="description" data-i18n="popup_description">
+    This extension allows you to use speech recognition through ElevenLabs API for voice input in any text field on a web page.
   </div>
   
   <div class="instructions">
-    <h2>Инструкция по использованию:</h2>
+    <h2 data-i18n="instructions_title">How to use:</h2>
     <ul>
-      <li>Нажмите <span class="key" id="keyName">Ctrl</span> дважды быстро и удерживайте</li>
-      <li>Говорите, пока удерживаете клавишу</li>
-      <li>Отпустите клавишу для завершения записи</li>
-      <li>Текст будет вставлен в активное поле ввода</li>
+      <li data-i18n="press_key_twice" data-i18n-params="keyName">Press <span class="key" id="keyName">Ctrl</span> twice quickly and hold</li>
+      <li data-i18n="speak_while_holding">Speak while holding the key</li>
+      <li data-i18n="release_to_finish">Release the key to finish recording</li>
+      <li data-i18n="text_will_be_inserted">Text will be inserted into the active input field</li>
     </ul>
   </div>
 
   <div class="status" id="status">
     <div class="status-icon"></div>
-    <span>Расширение активно</span>
+    <span data-i18n="extension_active">Extension active</span>
   </div>
   
-  <button class="settings-button" id="settings-button">Открыть настройки</button>
+  <button class="settings-button" id="settings-button" data-i18n="open_settings">Open Settings</button>
   
   <div class="footer">
-    Разработано с использованием технологии ElevenLabs для распознавания речи.
+    <span data-i18n="footer_text">Developed using ElevenLabs speech recognition technology.</span>
+    <br><a href="https://github.com/kaluchi/speech-to-text-extension" target="_blank">GitHub</a>
   </div>
 
+  <script src="localization.js"></script>
   <script src="popup.js"></script>
 </body>
 </html>

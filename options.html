@@ -1,8 +1,8 @@
 <!DOCTYPE html>
-<html>
+<html data-i18n-title="options_title">
 <head>
   <meta charset="utf-8">
-  <title>Настройки голосового ввода</title>
+  <title>Voice Input Settings</title>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -151,21 +151,28 @@
   </style>
 </head>
 <body>
-  <h1>Настройки голосового ввода</h1>
+  <h1 data-i18n="options_title">Voice Input Settings</h1>
   
   <div class="form-group">
-    <label for="api-key">API ключ ElevenLabs:</label>
+    <label for="api-key" data-i18n="api_key_label">ElevenLabs API Key:</label>
     <div class="api-key-container">
-      <input type="password" id="api-key" placeholder="Введите ваш API ключ ElevenLabs">
-      <button class="toggle-visibility" id="toggle-visibility">Показать</button>
+      <input type="password" id="api-key" data-i18n-placeholder="api_key_placeholder" placeholder="Enter your ElevenLabs API key">
+      <button class="toggle-visibility" id="toggle-visibility" data-i18n="show_key">Show</button>
     </div>
-    <p class="info-text">Вы можете получить API ключ, зарегистрировавшись на <a href="https://elevenlabs.io" target="_blank">elevenlabs.io</a></p>
+    <p class="info-text"><span data-i18n="api_key_info">You can get an API key by registering at</span> <a href="https://elevenlabs.io" target="_blank">elevenlabs.io</a></p>
   </div>
   
   <div class="form-group">
-    <label for="language-code">Язык распознавания:</label>
+    <label for="interface-language" data-i18n="language_label">Interface Language:</label>
+    <select id="interface-language">
+      <!-- Will be populated dynamically -->
+    </select>
+  </div>
+  
+  <div class="form-group">
+    <label for="language-code" data-i18n="recognition_language_label">Recognition Language:</label>
     <select id="language-code">
-      <option value="">Автоопределение языка</option>
+      <option value="" data-i18n="auto_detect_language">Auto-detect language</option>
       <option value="ru">Русский</option>
       <option value="en">English</option>
       <option value="uk">Українська</option>
@@ -177,84 +184,90 @@
       <option value="ja">日本語</option>
       <option value="zh">中文</option>
     </select>
-    <p class="info-text">Выберите язык распознавания для повышения точности.</p>
+    <p class="info-text" data-i18n="recognition_language_info">Select the recognition language to improve accuracy.</p>
   </div>
   
   <div class="form-group">
-    <label for="tag-audio-events">Маркировка звуковых событий:</label>
+    <label for="tag-audio-events" data-i18n="tag_audio_events_label">Tag Audio Events:</label>
     <select id="tag-audio-events">
-      <option value="false">Выключено</option>
-      <option value="true">Включено</option>
+      <option value="false" data-i18n="disabled">Disabled</option>
+      <option value="true" data-i18n="enabled">Enabled</option>
     </select>
-    <p class="info-text">При включении в распознанном тексте будут отмечены паузы, смех и другие звуковые события.</p>
+    <p class="info-text" data-i18n="tag_audio_events_info">When enabled, pauses, laughter, and other audio events will be marked in the recognized text.</p>
   </div>
 
   <div class="form-group">
-    <label for="timestamps-granularity">Детализация временных меток:</label>
+    <label for="timestamps-granularity" data-i18n="timestamps_label">Timestamps Detail:</label>
     <select id="timestamps-granularity">
-      <option value="none">Отключено</option>
-      <option value="word">По словам</option>
-      <option value="character">По символам</option>
+      <option value="none" data-i18n="none">Disabled</option>
+      <option value="word" data-i18n="word">By word</option>
+      <option value="character" data-i18n="character">By character</option>
     </select>
-    <p class="info-text">Выберите уровень детализации временных меток в транскрипции.</p>
+    <p class="info-text" data-i18n="timestamps_info">Select the level of timestamp detail in the transcription.</p>
   </div>
 
   <div class="form-group">
-    <label for="diarize">Разметка говорящих:</label>
+    <label for="diarize" data-i18n="diarize_label">Speaker Diarization:</label>
     <select id="diarize">
-      <option value="false">Выключено</option>
-      <option value="true">Включено</option>
+      <option value="false" data-i18n="disabled">Disabled</option>
+      <option value="true" data-i18n="enabled">Enabled</option>
     </select>
-    <p class="info-text">Включите для определения кто и когда говорит в записи.</p>
+    <p class="info-text" data-i18n="diarize_info">Enable to identify who is speaking and when in the recording.</p>
   </div>
 
   <div class="form-group">
-    <label for="num-speakers">Максимальное количество говорящих:</label>
-    <input type="number" id="num-speakers" min="1" max="32" placeholder="Автоопределение">
-    <p class="info-text">Укажите максимальное количество говорящих (от 1 до 32). Оставьте пустым для автоопределения.</p>
+    <label for="num-speakers" data-i18n="num_speakers_label">Maximum Number of Speakers:</label>
+    <input type="number" id="num-speakers" min="1" max="32" data-i18n-placeholder="num_speakers_placeholder" placeholder="Auto-detect">
+    <p class="info-text" data-i18n="num_speakers_info">Specify the maximum number of speakers (1 to 32). Leave empty for auto-detection.</p>
   </div>
 
   <div class="form-group">
-    <label>Ключевые слова для улучшения распознавания:</label>
+    <label data-i18n="keywords_label">Keywords for Improved Recognition:</label>
     <div id="keywords-container" class="keywords-container">
-      <!-- Сюда будут динамически добавляться поля для ключевых слов -->
+      <!-- Will be populated dynamically -->
     </div>
-    <button id="add-keyword" class="add-keyword">Добавить ключевое слово</button>
-    <p class="info-text">Добавьте ключевые слова и их веса (от -10 до 10) для улучшения распознавания.</p>
+    <button id="add-keyword" class="add-keyword" data-i18n="add_keyword">Add Keyword</button>
+    <p class="info-text" data-i18n="keywords_info">Add keywords and their weights (-10 to 10) to improve recognition.</p>
   </div>
 
   <div class="form-group">
-    <label for="preferred-microphone">Предпочитаемый микрофон:</label>
+    <label for="preferred-microphone" data-i18n="preferred_mic_label">Preferred Microphone:</label>
     <select id="preferred-microphone">
-      <option value="">Не задано</option>
+      <option value="" data-i18n="not_specified">Not specified</option>
     </select>
-    <p class="info-text">Выберите конкретный микрофон для ускорения запуска записи. Список обновится при открытии настроек.</p>
+    <p class="info-text" data-i18n="preferred_mic_info">Choose a specific microphone to speed up recording initialization. The list will update when settings are opened.</p>
   </div>
 
   <div class="form-group">
-    <label for="debug-audio">Отладка записанного звука:</label>
+    <label for="debug-audio" data-i18n="debug_audio_label">Debug Recorded Audio:</label>
     <select id="debug-audio">
-      <option value="false">Выключено</option>
-      <option value="true">Включено</option>
+      <option value="false" data-i18n="disabled">Disabled</option>
+      <option value="true" data-i18n="enabled">Enabled</option>
     </select>
-    <p class="info-text">При включении будет воспроизводиться запись параллельно с отправкой на сервер.</p>
+    <p class="info-text" data-i18n="debug_audio_info">When enabled, the recording will be played back while being sent to the server.</p>
   </div>
 
   <div class="form-group">
-    <label for="show-recording-mask">Визуальная индикация записи:</label>
+    <label for="show-recording-mask" data-i18n="recording_mask_label">Visual Recording Indicator:</label>
     <select id="show-recording-mask">
-      <option value="true">Включено</option>
-      <option value="false">Выключено</option>
+      <option value="true" data-i18n="enabled">Enabled</option>
+      <option value="false" data-i18n="disabled">Disabled</option>
     </select>
-    <p class="info-text">При включении во время записи будет отображаться цветовая индикация (жёлтая при инициализации, зелёная при записи).</p>
+    <p class="info-text" data-i18n="recording_mask_info">When enabled, a color indicator will be displayed during recording (yellow during initialization, green during recording).</p>
   </div>
   
   <div class="button-container">
-    <button id="reset-btn">Сбросить настройки</button>
+    <button id="reset-btn" data-i18n="reset_button">Reset Settings</button>
   </div>
   
   <div id="status"></div>
+  
+  <div class="footer" style="font-size: 12px; color: #888; text-align: center; margin-top: 20px; border-top: 1px solid #eee; padding-top: 10px;">
+    <span data-i18n="footer_text">Developed using ElevenLabs speech recognition technology.</span>
+    <br><a href="https://github.com/kaluchi/speech-to-text-extension" target="_blank">GitHub</a>
+  </div>
 
+  <script src="localization.js"></script>
   <script src="options.js"></script>
 </body>
 </html>
