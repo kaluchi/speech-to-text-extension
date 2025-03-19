@@ -1,156 +1,156 @@
-# Голосовой ввод с ElevenLabs - расширение для Chrome
+# Voice Input with ElevenLabs - Chrome Extension
 
-Расширение для Chrome, которое позволяет использовать технологию распознавания речи от ElevenLabs для голосового ввода текста в любое текстовое поле на веб-странице.
+A Chrome extension that enables you to use ElevenLabs speech recognition technology for voice input in any text field on a web page.
 
-## Важно: API ключ
+## Important: API Key
 
-⚠️ Расширение поставляется без API ключа. Для работы необходимо:
+⚠️ This extension is provided without an API key. To use it, you must:
 
-1. Зарегистрироваться на [сайте ElevenLabs](https://elevenlabs.io/)
-2. Перейти в раздел "Profile Settings"
-3. Найти или сгенерировать свой API ключ
-4. Внимательно ознакомиться с [политикой конфиденциальности](https://elevenlabs.io/privacy) и [условиями использования](https://elevenlabs.io/terms)
-   - ElevenLabs может хранить и анализировать отправленные аудиозаписи
-   - Ваши голосовые данные могут использоваться для улучшения сервиса
-   - Существуют ограничения на использование в зависимости от типа аккаунта
+1. Register on the [ElevenLabs website](https://elevenlabs.io/)
+2. Go to "Profile Settings"
+3. Find or generate your API key
+4. Carefully review the [Privacy Policy](https://elevenlabs.io/privacy) and [Terms of Service](https://elevenlabs.io/terms)
+   - ElevenLabs may store and analyze submitted audio recordings
+   - Your voice data may be used to improve the service
+   - Usage limitations apply depending on your account type
 
-Мы рекомендуем:
-- Использовать уникальный API ключ для этого расширения
-- Регулярно обновлять ключ в целях безопасности
-- Следить за использованием ключа в личном кабинете ElevenLabs
-- При необходимости ограничить использование ключа по IP или установить другие ограничения в настройках ElevenLabs
+We recommend:
+- Using a unique API key for this extension
+- Regularly updating your key for security purposes
+- Monitoring your key usage in your ElevenLabs dashboard
+- If necessary, restricting key usage by IP or setting other limitations in ElevenLabs settings
 
-## Функциональность
+## Features
 
-- Активация записи голоса двойным нажатием и удержанием клавиши Cmd (Mac) или Ctrl (Windows/Linux)
-- Преобразование речи в текст с помощью API ElevenLabs
-- Настраиваемый язык распознавания (русский, английский и другие)
-- Вставка распознанного текста в активное текстовое поле с учетом контекста
-- Автоматическое копирование в буфер обмена, если нет активного поля ввода
-- Визуальная индикация процесса записи (настраиваемая)
-- Автоматическое открытие настроек при отсутствии API ключа
-- Поддержка отмены вставки (Cmd+Z / Ctrl+Z)
-- Расширенные настройки распознавания:
-  - Маркировка звуковых событий (смех, аплодисменты и др.)
-  - Временные метки для слов или символов
-  - Разметка говорящих в диалогах
-  - Указание количества говорящих (до 32)
-  - Ключевые слова для улучшения точности распознавания
-  - Выбор предпочитаемого микрофона
-  - Отладка записанного звука
-  - Настройка визуальной индикации записи
+- Activate voice recording with a double press and hold of the Cmd key (Mac) or Ctrl key (Windows/Linux)
+- Convert speech to text using the ElevenLabs API
+- Customizable recognition language (Russian, English, and others)
+- Insert recognized text into the active text field with context awareness
+- Automatically copy to clipboard if no active input field is present
+- Visual recording process indication (customizable)
+- Automatic settings page opening when API key is missing
+- Support for insertion undo (Cmd+Z / Ctrl+Z)
+- Advanced recognition settings:
+  - Sound event marking (laughter, applause, etc.)
+  - Timestamps for words or characters
+  - Speaker identification in dialogues
+  - Speaker count specification (up to 32)
+  - Keywords to improve recognition accuracy
+  - Preferred microphone selection
+  - Audio recording debugging
+  - Visual recording indication customization
 
-## Установка расширения
+## Extension Installation
 
-1. Загрузите все файлы в одну папку на вашем компьютере
-2. Откройте Chrome и перейдите на страницу `chrome://extensions/`
-3. Включите "Режим разработчика" (переключатель в правом верхнем углу страницы)
-4. Нажмите кнопку "Загрузить распакованное расширение"
-5. Выберите папку с файлами расширения
+1. Download all files into a single folder on your computer
+2. Open Chrome and navigate to `chrome://extensions/`
+3. Enable "Developer Mode" (toggle in the top right corner of the page)
+4. Click the "Load unpacked extension" button
+5. Select the folder containing the extension files
 
-## Использование
+## Usage
 
-1. Перейдите на любую веб-страницу и установите курсор в текстовое поле
-2. Дважды быстро нажмите и удерживайте Cmd (Mac) или Ctrl (Windows/Linux)
-3. Говорите, пока удерживаете клавишу
-4. Отпустите клавишу для завершения записи
-5. Распознанный текст будет вставлен в активное поле с возможностью отмены (Cmd+Z / Ctrl+Z)
+1. Go to any web page and place your cursor in a text field
+2. Quickly double-press and hold Cmd (Mac) or Ctrl (Windows/Linux)
+3. Speak while holding the key
+4. Release the key to finish recording
+5. The recognized text will be inserted into the active field with undo capability (Cmd+Z / Ctrl+Z)
 
-## Настройка расширения
+## Extension Configuration
 
-Расширение предоставляет удобный интерфейс для настройки:
+The extension provides a user-friendly interface for configuration:
 
-1. Нажмите на иконку расширения в панели инструментов Chrome
-2. Нажмите кнопку "Открыть настройки"
-3. В открывшейся странице настроек первым делом укажите:
-   - API ключ ElevenLabs (обязательно)
-     - Получите ключ на сайте ElevenLabs (см. раздел "Важно: API ключ")
-     - Поле ключа по умолчанию скрыто для безопасности
-     - Кнопка "Показать" позволяет увидеть и отредактировать ключ
-     - При ошибке валидации поле автоматически показывается
-     - Визуальная индикация ошибок с анимацией
-   - Язык распознавания речи
-   - Включение/отключение маркировки звуковых событий
-   - Детализацию временных меток (отключено/по словам/по символам)
-   - Разметку говорящих в диалогах
-   - Максимальное количество говорящих (1-32)
-   - Ключевые слова для улучшения распознавания (до 100 слов)
-   - Предпочитаемый микрофон для ускорения запуска записи
-   - Отладку записанного звука (воспроизведение записи)
-   - Визуальную индикацию процесса записи
+1. Click on the extension icon in the Chrome toolbar
+2. Click the "Open Settings" button
+3. In the settings page that opens, first specify:
+   - ElevenLabs API key (required)
+     - Get the key from the ElevenLabs website (see "Important: API Key" section)
+     - The key field is hidden by default for security
+     - The "Show" button allows you to view and edit the key
+     - The field automatically shows when validation errors occur
+     - Visual error indication with animation
+   - Speech recognition language
+   - Enable/disable sound event marking
+   - Timestamp detail level (disabled/by words/by characters)
+   - Speaker identification in dialogues
+   - Maximum number of speakers (1-32)
+   - Keywords to improve recognition (up to 100 words)
+   - Preferred microphone for faster recording startup
+   - Audio recording debugging (playback of recording)
+   - Visual recording process indication
 
-## Требования
+## Requirements
 
-- Chrome версии 80 или выше
-- Доступ к микрофону
-- Действующий API ключ ElevenLabs (требуется регистрация)
-- Интернет-соединение для отправки аудио в API ElevenLabs
-- HTTPS-соединение для работы с буфером обмена
-- Согласие с политикой конфиденциальности и условиями использования ElevenLabs
+- Chrome version 80 or higher
+- Microphone access
+- Valid ElevenLabs API key (registration required)
+- Internet connection for sending audio to the ElevenLabs API
+- HTTPS connection for clipboard functionality
+- Agreement with ElevenLabs' privacy policy and terms of service
 
-## Безопасность и конфиденциальность
+## Security and Privacy
 
-- Расширение не хранит и не передает данные третьим лицам, кроме ElevenLabs
-- Аудиозаписи передаются напрямую в API ElevenLabs
-- API ключ хранится локально в браузере в зашифрованном виде
-- Рекомендуется регулярно проверять использование ключа в личном кабинете ElevenLabs
-- При подозрении на компрометацию ключа немедленно замените его в настройках расширения и деактивируйте старый ключ в ElevenLabs
+- The extension does not store or transmit data to third parties other than ElevenLabs
+- Audio recordings are sent directly to the ElevenLabs API
+- API key is stored locally in the browser in encrypted form
+- We recommend regularly checking key usage in your ElevenLabs dashboard
+- If you suspect your key has been compromised, immediately replace it in the extension settings and deactivate the old key in ElevenLabs
 
-## Особенности работы
+## Operational Features
 
-Расширение учитывает контекст при вставке текста:
+The extension considers context when inserting text:
 
-- Если курсор находится после знака препинания (., !, ?), добавляется пробел перед вставкой
-- Если курсор находится после символа переноса строки, текст вставляется без дополнительного форматирования
-- В остальных случаях перед вставляемым текстом добавляется ". " для разделения мыслей
+- If the cursor is after a punctuation mark (., !, ?), a space is added before insertion
+- If the cursor is after a line break character, text is inserted without additional formatting
+- In other cases, ". " is added before the inserted text to separate thoughts
 
-При отсутствии активного поля ввода:
-- Распознанный текст автоматически копируется в буфер обмена
-- Отображается уведомление об успешном копировании
+When no active input field is present:
+- Recognized text is automatically copied to the clipboard
+- A notification of successful copying is displayed
 
-Визуальная индикация записи:
-- Жёлтый оверлей при инициализации записи
-- Зелёный оверлей во время активной записи
-- Можно отключить в настройках
+Visual recording indication:
+- Yellow overlay during recording initialization
+- Green overlay during active recording
+- Can be disabled in settings
 
-Проверка API ключа:
-- При попытке начать запись проверяется наличие и корректность API ключа
-- Если ключ отсутствует или некорректен, автоматически открывается страница настроек
-- Поле ввода ключа автоматически показывается и получает фокус при ошибке
-- Запись не начнется, пока не будет указан правильный API ключ
+API key verification:
+- When attempting to start recording, the presence and validity of the API key is checked
+- If the key is missing or invalid, the settings page opens automatically
+- The key input field is automatically shown and focused when an error occurs
+- Recording will not start until a valid API key is provided
 
-## Файлы расширения
+## Extension Files
 
-- `manifest.json` - Манифест расширения
-- `content.js` - Основной скрипт, который выполняется на веб-страницах
-- `popup.html` - HTML-код для всплывающего окна расширения
-- `popup.js` - JavaScript-код для всплывающего окна
-- `options.html` - HTML-код для страницы настроек
-- `options.js` - JavaScript-код для страницы настроек
-- `background.js` - Фоновый скрипт для обработки системных событий
-- `icon16.png`, `icon48.png`, `icon128.png` - Иконки расширения
+- `manifest.json` - Extension manifest
+- `content.js` - Main script that runs on web pages
+- `popup.html` - HTML code for the extension popup
+- `popup.js` - JavaScript code for the popup
+- `options.html` - HTML code for the settings page
+- `options.js` - JavaScript code for the settings page
+- `background.js` - Background script for processing system events
+- `icon16.png`, `icon48.png`, `icon128.png` - Extension icons
 
-## Ограничения
+## Limitations
 
-- Не работает на системных страницах Chrome (chrome://)
-- Требует разрешения на доступ к микрофону
-- Ограничения бесплатного аккаунта ElevenLabs могут применяться к распознаванию речи
-- Копирование в буфер обмена может быть ограничено на некоторых веб-сайтах из соображений безопасности
+- Does not work on Chrome system pages (chrome://)
+- Requires microphone access permission
+- Free ElevenLabs account limitations may apply to speech recognition
+- Clipboard copying may be restricted on some websites for security reasons
 
-## Устранение неполадок
+## Troubleshooting
 
-Если у вас возникли проблемы с расширением:
+If you experience issues with the extension:
 
-1. Проверьте, включен ли доступ к микрофону для расширения
-2. Убедитесь, что API ключ ElevenLabs действителен
-3. Проверьте консоль разработчика на наличие ошибок (F12 -> вкладка Console)
-4. Попробуйте перезагрузить расширение на странице chrome://extensions/
-5. Если текст не копируется в буфер обмена:
-   - Убедитесь, что страница загружена по HTTPS
-   - Проверьте, разрешено ли копирование на текущем сайте
-   - Попробуйте использовать другой браузер или обновите текущий
+1. Check if microphone access is enabled for the extension
+2. Ensure your ElevenLabs API key is valid
+3. Check the developer console for errors (F12 -> Console tab)
+4. Try reloading the extension on the chrome://extensions/ page
+5. If text is not copied to the clipboard:
+   - Make sure the page is loaded via HTTPS
+   - Check if copying is allowed on the current site
+   - Try using a different browser or update your current one
 
-## Документация API
+## API Documentation
 
-Расширение использует ElevenLabs Speech-to-Text API. Полная документация доступна по адресу:
+The extension uses the ElevenLabs Speech-to-Text API. Full documentation is available at:
 https://elevenlabs.io/docs/api-reference/speech-to-text/convert
