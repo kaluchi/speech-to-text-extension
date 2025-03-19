@@ -614,6 +614,145 @@ function actuallyStopRecording() {
   }
 }
 
+// Default audio detection threshold - lowered for better sensitivity
+const DEFAULT_SILENCE_THRESHOLD = 0.002; // Reduced from 0.01 to detect quieter sounds
+
+/**
+ * Checks if the audio data contains actual sound above the silence threshold
+ * @param {Blob} audioBlob - Audio data from MediaRecorder's ondataavailable event
+ * @param {number} [silenceThreshold=0.01] - Threshold for detecting silence (optional)
+ * @returns {Promise<boolean>} - True if sound is detected, false if silence or error
+ */
+async function hasSound(audioBlob, silenceThreshold = DEFAULT_SILENCE_THRESHOLD) {
+  console.log(`=== hasSound DEBUG START ===`);
+  console.log(`AudioBlob details:`, {
+    size: audioBlob.size,
+    type: audioBlob.type,
+    threshold: silenceThreshold
+  });
+
+  // Check browser compatibility
+  if (!window.AudioContext && !window.webkitAudioContext) {
+    console.error('AudioContext is not supported in this browser');
+    return false;
+  }
+
+  try {
+    console.log(`Converting Blob to ArrayBuffer...`);
+    // Convert Blob to ArrayBuffer
+    const arrayBuffer = await audioBlob.arrayBuffer();
+    console.log(`ArrayBuffer created, size: ${arrayBuffer.byteLength} bytes`);
+
+    // Create AudioContext
+    console.log(`Creating AudioContext...`);
+    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    console.log(`AudioContext created, sample rate: ${audioContext.sampleRate}Hz`);
+
+    // Decode audio data
+    console.log(`Decoding audio data...`);
+    let audioBuffer;
+    try {
+      audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+      console.log(`Audio decoded successfully!`);
+    } catch (decodeError) {
+      console.error(`Error decoding audio data:`, decodeError);
+      audioContext.close();
+      return false;
+    }
+
+    // Log audio buffer details
+    console.log(`AudioBuffer details:`, {
+      duration: audioBuffer.duration.toFixed(2) + 's',
+      numberOfChannels: audioBuffer.numberOfChannels,
+      length: audioBuffer.length,
+      sampleRate: audioBuffer.sampleRate
+    });
+
+    // Analyze all channels
+    const channels = audioBuffer.numberOfChannels;
+    let totalRms = 0;
+    const channelRmsValues = [];
+
+    // Display some sample data for debugging
+    const displaySamples = 10; // Number of samples to display
+
+    // For each channel
+    for (let i = 0; i < channels; i++) {
+      console.log(`Analyzing channel ${i + 1}/${channels}...`);
+      const channelData = audioBuffer.getChannelData(i);
+      
+      // Analyze full audio length for better accuracy
+      const sampleSize = channelData.length;
+      console.log(`Channel ${i + 1} data length: ${sampleSize} samples`);
+      
+      // Show a few sample values for debugging
+      const sampleValues = [];
+      for (let j = 0; j < displaySamples && j < sampleSize; j++) {
+        sampleValues.push(channelData[j]);
+      }
+      console.log(`First ${displaySamples} samples:`, sampleValues);
+      
+      // Calculate min/max/avg to check if data is flat
+      let min = 1, max = -1, sum = 0;
+      for (let j = 0; j < Math.min(1000, sampleSize); j++) {
+        const sample = channelData[j];
+        min = Math.min(min, sample);
+        max = Math.max(max, sample);
+        sum += Math.abs(sample);
+      }
+      console.log(`First 1000 samples stats: min=${min}, max=${max}, avg=${sum/Math.min(1000, sampleSize)}`);
+      
+      // Calculate RMS for entire channel
+      let sumSquares = 0;
+      for (let j = 0; j < sampleSize; j++) {
+        sumSquares += channelData[j] * channelData[j];
+      }
+      const rms = Math.sqrt(sumSquares / sampleSize);
+      channelRmsValues.push(rms);
+      totalRms += rms;
+      
+      console.log(`Channel ${i + 1} RMS: ${rms} (threshold: ${silenceThreshold})`);
+    }
+
+    // Calculate average RMS across channels
+    const avgRms = totalRms / channels;
+    console.log(`Average RMS across all channels: ${avgRms}`);
+    console.log(`Silence threshold: ${silenceThreshold}`);
+    console.log(`Has sound: ${avgRms > silenceThreshold}`);
+
+    // Clean up
+    audioContext.close();
+    console.log(`AudioContext closed`);
+
+    // Also try a different approach - check if there are any peaks above a certain level
+    let hasPeaks = false;
+    const peakThreshold = 0.1;
+    for (let i = 0; i < channels && !hasPeaks; i++) {
+      const channelData = audioBuffer.getChannelData(i);
+      // Check random samples throughout the buffer for peaks
+      const checkPoints = 100;
+      for (let j = 0; j < checkPoints; j++) {
+        const idx = Math.floor(channelData.length * (j / checkPoints));
+        if (Math.abs(channelData[idx]) > peakThreshold) {
+          hasPeaks = true;
+          console.log(`Found peak at sample ${idx}: ${channelData[idx]}`);
+          break;
+        }
+      }
+    }
+    console.log(`Peak detection result: ${hasPeaks ? 'Peaks found' : 'No peaks found'}`);
+
+    // Return true if average RMS is above threshold or if peaks were detected
+    const result = avgRms > silenceThreshold || hasPeaks;
+    console.log(`=== hasSound DEBUG END === Final result: ${result}`);
+    return result;
+  } catch (error) {
+    console.error('Error analyzing audio:', error);
+    console.log(`=== hasSound DEBUG END === Error occurred`);
+    return false; // Return false on error (e.g., invalid blob or decoding failure)
+  }
+}
+
 // Функция для очистки ресурсов записи
 function cleanupRecordingResources() {
   try {
@@ -638,13 +777,23 @@ function cleanupRecordingResources() {
 }
 
 // Функция для отправки и воспроизведения записи
-function sendToServer(audioBlob) {
+async function sendToServer(audioBlob) {
   console.log(`Отправка аудио на сервер: ${audioBlob.size} байт, Формат: ${audioBlob.type}`);
   
   // Если включена отладка звука, воспроизводим запись
   if (settings.debugAudio === 'true') {
     console.log('Отладка звука включена, воспроизводим запись');
     playRecording(audioBlob);
+  }
+  
+  // Проверяем, содержит ли аудио звук выше порога тишины
+  const containsSound = await hasSound(audioBlob);
+  console.log(`Проверка аудио на наличие звука: ${containsSound ? 'Звук обнаружен' : 'Тишина'}`);
+  
+  if (!containsSound) {
+    console.log('Аудио не содержит звука, отмена отправки в API');
+    displayRecognizedText("Речь не обнаружена. Пожалуйста, говорите громче или проверьте микрофон.");
+    return;
   }
   
   // Отправляем запись в ElevenLabs API для преобразования речи в текст
