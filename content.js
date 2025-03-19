@@ -10,11 +10,11 @@ function prepareTextForInsertion(text, beforeCursor) {
   // Логируем входящие параметры
   console.log(`prepareTextForInsertion: text="${text}", beforeCursor="${beforeCursor}"`);
   
-  // Если текст пустой, нечего обрабатывать
-  if (!text || !text.trim()) {
-    console.log(`prepareTextForInsertion: возвращаем пустой текст="${text}"`);
-    return text;
-  }
+      // If text is empty, nothing to process
+      if (!text || !text.trim()) {
+        console.log(`prepareTextForInsertion: returning empty text="${text}"`);
+        return text;
+      }
 
   // Обрезаем лишние пробелы, переносы строк и др. в конце текста
   let trimmedText = text.replace(/^\s+/, '').replace(/\s+$/, '');
@@ -61,6 +61,7 @@ function prepareTextForInsertion(text, beforeCursor) {
 // Настройки по умолчанию
 let settings = {
   apiKey: '',
+  interfaceLanguage: '', // Язык интерфейса, добавлено для синхронизации
   languageCode: 'ru',
   tagAudioEvents: 'false',
   timestampsGranularity: 'none',
@@ -76,6 +77,7 @@ function loadSettings() {
   try {
     chrome.storage.sync.get({
       apiKey: '',
+      interfaceLanguage: '', // Добавлен язык интерфейса
       languageCode: 'ru',
       tagAudioEvents: 'false',
       timestampsGranularity: 'none',
@@ -86,8 +88,15 @@ function loadSettings() {
       showRecordingMask: 'true'
     }, (items) => {
       settings = items;
+      
+      // Устанавливаем язык интерфейса, если он задан
+      if (window.i18n && settings.interfaceLanguage) {
+        window.i18n.setLanguage(settings.interfaceLanguage);
+      }
+      
       console.log("Настройки загружены:", JSON.stringify({
         apiKeyLength: settings.apiKey ? settings.apiKey.length : 0,
+        interfaceLanguage: settings.interfaceLanguage, // Логируем язык интерфейса
         languageCode: settings.languageCode,
         tagAudioEvents: settings.tagAudioEvents,
         timestampsGranularity: settings.timestampsGranularity,
@@ -109,10 +118,17 @@ loadSettings();
 // Слушаем изменения настроек
 try {
   if (chrome.storage && chrome.storage.onChanged) {
-    chrome.storage.onChanged.addListener((changes, areaName) => {
+  chrome.storage.onChanged.addListener((changes, areaName) => {
       if (areaName === 'sync') {
         if (changes.apiKey) {
           settings.apiKey = changes.apiKey.newValue;
+        }
+        if (changes.interfaceLanguage) {
+          settings.interfaceLanguage = changes.interfaceLanguage.newValue;
+          // Применяем изменение языка интерфейса
+          if (window.i18n && settings.interfaceLanguage) {
+            window.i18n.setLanguage(settings.interfaceLanguage);
+          }
         }
         if (changes.languageCode) {
           settings.languageCode = changes.languageCode.newValue;
@@ -140,6 +156,7 @@ try {
         }
         console.log("Настройки обновлены:", JSON.stringify({
           apiKeyLength: settings.apiKey ? settings.apiKey.length : 0,
+          interfaceLanguage: settings.interfaceLanguage, // Логируем язык интерфейса
           languageCode: settings.languageCode,
           tagAudioEvents: settings.tagAudioEvents,
           timestampsGranularity: settings.timestampsGranularity,
@@ -791,8 +808,8 @@ async function sendToServer(audioBlob) {
   console.log(`Проверка аудио на наличие звука: ${containsSound ? 'Звук обнаружен' : 'Тишина'}`);
   
   if (!containsSound) {
-    console.log('Аудио не содержит звука, отмена отправки в API');
-    displayRecognizedText("Речь не обнаружена. Пожалуйста, говорите громче или проверьте микрофон.");
+    console.log('Audio contains no speech, canceling API request');
+    displayRecognizedText(i18n.getTranslation('speech_not_detected'));
     return;
   }
   
@@ -809,10 +826,10 @@ async function sendToElevenLabsAPI(audioBlob) {
       return;
     }
     
-    // Проверяем наличие API ключа
+    // Check for API key
     if (!settings.apiKey) {
-      console.warn("API ключ ElevenLabs не предоставлен");
-      displayRecognizedText("Пожалуйста, укажите API ключ ElevenLabs в настройках расширения");
+      console.warn("ElevenLabs API key not provided");
+      displayRecognizedText(i18n.getTranslation('missing_api_key'));
       return;
     }
     
@@ -949,8 +966,8 @@ async function copyToClipboard(text) {
     // Пробуем скопировать текст
     await navigator.clipboard.writeText(text);
     
-    // Показываем уведомление об успешном копировании
-    showCopyNotification('Текст скопирован в буфер обмена');
+    // Show notification about successful copying
+    showCopyNotification(i18n.getTranslation('text_copied'));
     return true;
   } catch (error) {
     console.error('Ошибка при копировании в буфер обмена:', error);
@@ -975,7 +992,7 @@ async function copyToClipboard(text) {
       }
     } catch (fallbackError) {
       console.error('Ошибка при использовании запасного метода копирования:', fallbackError);
-      showCopyNotification('Не удалось скопировать текст', true);
+      showCopyNotification(i18n.getTranslation('copy_failed'), true);
       return false;
     }
   }
@@ -1292,12 +1309,12 @@ function playRecording(audioBlob) {
 
     // Добавляем информацию о записи
     const infoDiv = document.createElement('div');
-    infoDiv.textContent = `Формат: ${audioBlob.type}, Размер: ${(audioBlob.size / 1024).toFixed(1)} КБ`;
+    infoDiv.textContent = i18n.getTranslation('recording_info', audioBlob.type, (audioBlob.size / 1024).toFixed(1));
     audioContainer.appendChild(infoDiv);
     
     // Добавляем кнопку скачивания
     const downloadButton = document.createElement('button');
-    downloadButton.textContent = 'Скачать запись';
+    downloadButton.textContent = i18n.getTranslation('download_recording');
     downloadButton.onclick = () => downloadRecording(audioBlob);
     downloadButton.style.cssText = 'margin-top: 10px; padding: 5px 10px;';
     audioContainer.appendChild(downloadButton);
@@ -1350,7 +1367,7 @@ function createAudioContainer() {
       
       // Добавляем заголовок
       const header = document.createElement('h3');
-      header.textContent = 'Записанное аудио';
+      header.textContent = i18n.getTranslation('recorded_audio');
       container.appendChild(header);
     } else {
       console.warn('Не удалось найти body для добавления аудио контейнера');
@@ -1520,34 +1537,34 @@ async function checkMicrophonePermission() {
 // Функция для получения понятного сообщения об ошибке
 function getErrorMessageForMicrophone(error) {
   if (!error) {
-    return "Неизвестная ошибка";
+    return i18n.getTranslation('unknown_error');
   }
   
   if (error.name) {
     switch (error.name) {
       case "NotAllowedError":
       case "PermissionDeniedError":
-        return "Доступ к микрофону запрещен";
+        return i18n.getTranslation('mic_access_denied');
         
       case "NotFoundError":
       case "DevicesNotFoundError":
-        return "Микрофон не найден";
+        return i18n.getTranslation('mic_not_found');
         
       case "NotReadableError":
       case "TrackStartError":
-        return "Микрофон занят другим приложением";
+        return i18n.getTranslation('mic_in_use');
         
       case "OverconstrainedError":
       case "ConstraintNotSatisfiedError":
-        return "Технические ограничения микрофона";
+        return i18n.getTranslation('technical_limitations');
         
       case "TypeError":
-        return "Неверный тип данных при запросе микрофона";
+        return i18n.getTranslation('incorrect_data_type');
         
       default:
-        return `Ошибка микрофона: ${error.name}`;
+        return i18n.getTranslation('unknown_mic_error', error.name);
     }
   }
   
-  return error.message || "Неизвестная ошибка доступа к микрофону";
+  return error.message || i18n.getTranslation('unknown_error');
 }
