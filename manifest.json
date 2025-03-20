@@ -21,12 +21,13 @@
         "content-utils.js",
         "content-settings.js",
         "content-state.js",
+        "content-recorder-analysis.js",
         "content-recorder.js", 
         "content-speechapi.js",
         "content-text.js",
         "content-main.js"
       ],
-      "_comment": "Порядок загрузки: 1) localization.js - базовая локализация, 2) content-utils.js - утилиты, 3) content-settings.js - настройки, 4) content-state.js - управление состоянием, 5) content-recorder.js - запись аудио, 6) content-speechapi.js - API распознавания, 7) content-text.js - работа с текстом, 8) content-main.js - основные обработчики событий",
+      "_comment": "Порядок загрузки: 1) localization.js - базовая локализация, 2) content-utils.js - утилиты, 3) content-settings.js - настройки, 4) content-state.js - управление состоянием, 5) content-recorder-analysis.js - анализ аудио, 6) content-recorder.js - запись аудио, 7) content-speechapi.js - API распознавания, 8) content-text.js - работа с текстом, 9) content-main.js - основные обработчики событий",
       "run_at": "document_end"
     }
   ],
