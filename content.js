@@ -641,75 +641,105 @@ const DEFAULT_SILENCE_THRESHOLD = 0.001; // Reduced from 0.01 to detect quieter 
  * @returns {Promise<boolean>} - True if sound is detected, false if silence or error
  */
 async function hasSound(audioBlob, silenceThreshold = DEFAULT_SILENCE_THRESHOLD) {
-  console.log(`=== hasSound DEBUG START ===`);
-  console.log(`AudioBlob details:`, {
-    size: audioBlob.size,
-    type: audioBlob.type,
-    threshold: silenceThreshold
-  });
+  try {
+    // Вызываем функцию анализа и получаем результат и отчет
+    const { hasSoundResult, analyzeReport } = await analyzeAudioForSound(audioBlob, silenceThreshold);
+    
+    // Выводим отчет об анализе
+    console.log(`=== hasSound ANALYSIS REPORT ===`, analyzeReport);
+    
+    // Возвращаем результат проверки
+    return hasSoundResult;
+  } catch (error) {
+    console.error('Error analyzing audio:', error);
+    return false; // Возвращаем false при ошибке
+  }
+}
 
-  // Check browser compatibility
+/**
+ * Анализирует аудио данные и определяет, содержат ли они звук
+ * @param {Blob} audioBlob - Аудио данные из MediaRecorder
+ * @param {number} threshold - Порог для определения тишины
+ * @returns {Promise<{hasSoundResult: boolean, analyzeReport: Object}>} - Результат анализа и подробный отчет
+ */
+async function analyzeAudioForSound(audioBlob, threshold) {
+  // Создаем объект для сбора отчета об анализе
+  const analyzeReport = {
+    // Информация о входных данных
+    inputData: {
+      size: audioBlob.size,        // Размер blob в байтах
+      type: audioBlob.type,        // Тип/формат аудио (MIME)
+      threshold: threshold         // Используемый порог тишины
+    },
+    // Информация об AudioContext
+    contextInfo: null,             // Будет заполнено информацией об AudioContext
+    // Информация о декодированном аудио буфере
+    audioBuffer: null,             // Будет заполнено деталями буфера
+    // Анализ по каналам
+    channelAnalysis: [],           // Массив с анализом каждого канала
+    // Итоговые результаты
+    results: {                     
+      avgRms: null,                // Средний RMS по всем каналам
+      hasSound: null,              // Результат на основе RMS
+      hasPeaks: null,              // Есть ли пики в аудиоданных
+      peaksDetails: [],            // Детали найденных пиков
+      finalResult: null            // Итоговый результат анализа
+    }
+  };
+  
+  // Проверяем поддержку AudioContext
   if (!window.AudioContext && !window.webkitAudioContext) {
-    console.error('AudioContext is not supported in this browser');
-    return false;
+    analyzeReport.error = 'AudioContext not supported in this browser';
+    return { hasSoundResult: false, analyzeReport };
   }
 
   try {
-    console.log(`Converting Blob to ArrayBuffer...`);
-    // Convert Blob to ArrayBuffer
+    // Преобразуем Blob в ArrayBuffer
     const arrayBuffer = await audioBlob.arrayBuffer();
-    console.log(`ArrayBuffer created, size: ${arrayBuffer.byteLength} bytes`);
-
-    // Create AudioContext
-    console.log(`Creating AudioContext...`);
+    analyzeReport.inputData.arrayBufferSize = arrayBuffer.byteLength; // Размер ArrayBuffer в байтах
+    
+    // Создаем AudioContext
     const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-    console.log(`AudioContext created, sample rate: ${audioContext.sampleRate}Hz`);
-
-    // Decode audio data
-    console.log(`Decoding audio data...`);
+    analyzeReport.contextInfo = {
+      sampleRate: audioContext.sampleRate  // Частота дискретизации в Гц
+    };
+    
+    // Декодируем аудио данные
     let audioBuffer;
     try {
       audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
-      console.log(`Audio decoded successfully!`);
     } catch (decodeError) {
-      console.error(`Error decoding audio data:`, decodeError);
       audioContext.close();
-      return false;
+      analyzeReport.error = `Error decoding audio: ${decodeError.message}`;
+      return { hasSoundResult: false, analyzeReport };
     }
-
-    // Log audio buffer details
-    console.log(`AudioBuffer details:`, {
-      duration: audioBuffer.duration.toFixed(2) + 's',
-      numberOfChannels: audioBuffer.numberOfChannels,
-      length: audioBuffer.length,
-      sampleRate: audioBuffer.sampleRate
-    });
-
-    // Analyze all channels
+    
+    // Сохраняем информацию о декодированном буфере
+    analyzeReport.audioBuffer = {
+      duration: audioBuffer.duration.toFixed(2) + 's',  // Длительность в секундах
+      numberOfChannels: audioBuffer.numberOfChannels,   // Количество каналов (1=моно, 2=стерео)
+      length: audioBuffer.length,                       // Количество сэмплов
+      sampleRate: audioBuffer.sampleRate                // Частота дискретизации
+    };
+    
+    // Анализируем все каналы
     const channels = audioBuffer.numberOfChannels;
     let totalRms = 0;
     const channelRmsValues = [];
-
-    // Display some sample data for debugging
-    const displaySamples = 10; // Number of samples to display
-
-    // For each channel
+    const displaySamples = 10; // Количество сэмплов для отображения
+    
+    // Для каждого канала
     for (let i = 0; i < channels; i++) {
-      console.log(`Analyzing channel ${i + 1}/${channels}...`);
       const channelData = audioBuffer.getChannelData(i);
-      
-      // Analyze full audio length for better accuracy
       const sampleSize = channelData.length;
-      console.log(`Channel ${i + 1} data length: ${sampleSize} samples`);
       
-      // Show a few sample values for debugging
+      // Собираем первые несколько значений для примера
       const sampleValues = [];
       for (let j = 0; j < displaySamples && j < sampleSize; j++) {
         sampleValues.push(channelData[j]);
       }
-      console.log(`First ${displaySamples} samples:`, sampleValues);
       
-      // Calculate min/max/avg to check if data is flat
+      // Вычисляем min/max/avg для первых 1000 сэмплов
       let min = 1, max = -1, sum = 0;
       for (let j = 0; j < Math.min(1000, sampleSize); j++) {
         const sample = channelData[j];
@@ -717,9 +747,8 @@ async function hasSound(audioBlob, silenceThreshold = DEFAULT_SILENCE_THRESHOLD)
         max = Math.max(max, sample);
         sum += Math.abs(sample);
       }
-      console.log(`First 1000 samples stats: min=${min}, max=${max}, avg=${sum/Math.min(1000, sampleSize)}`);
       
-      // Calculate RMS for entire channel
+      // Вычисляем RMS для всего канала
       let sumSquares = 0;
       for (let j = 0; j < sampleSize; j++) {
         sumSquares += channelData[j] * channelData[j];
@@ -728,45 +757,65 @@ async function hasSound(audioBlob, silenceThreshold = DEFAULT_SILENCE_THRESHOLD)
       channelRmsValues.push(rms);
       totalRms += rms;
       
-      console.log(`Channel ${i + 1} RMS: ${rms} (threshold: ${silenceThreshold})`);
+      // Сохраняем информацию о канале
+      analyzeReport.channelAnalysis.push({
+        channel: i + 1,                            // Номер канала
+        samples: sampleValues,                     // Примеры первых сэмплов
+        length: sampleSize,                        // Длина канала в сэмплах
+        stats: {                                   
+          min,                                     // Минимальное значение амплитуды
+          max,                                     // Максимальное значение амплитуды
+          avg: sum/Math.min(1000, sampleSize)      // Средняя амплитуда (первые 1000 сэмплов)
+        },
+        rms: rms                                   // Root Mean Square (среднеквадратичное значение)
+      });
     }
-
-    // Calculate average RMS across channels
+    
+    // Вычисляем средний RMS по всем каналам
     const avgRms = totalRms / channels;
-    console.log(`Average RMS across all channels: ${avgRms}`);
-    console.log(`Silence threshold: ${silenceThreshold}`);
-    console.log(`Has sound: ${avgRms > silenceThreshold}`);
-
-    // Clean up
+    analyzeReport.results.avgRms = avgRms;                  // Средний RMS всех каналов
+    analyzeReport.results.hasSound = avgRms > threshold;    // Результат проверки по RMS
+    
+    // Освобождаем ресурсы
     audioContext.close();
-    console.log(`AudioContext closed`);
-
-    // Also try a different approach - check if there are any peaks above a certain level
+    
+    // Также пробуем другой подход - проверка на пики выше определенного уровня
     let hasPeaks = false;
-    const peakThreshold = 0.1;
+    const peakThreshold = 0.1;  // Порог для определения пиков
+    
     for (let i = 0; i < channels && !hasPeaks; i++) {
       const channelData = audioBuffer.getChannelData(i);
-      // Check random samples throughout the buffer for peaks
+      // Проверяем выборочные точки по всему буферу
       const checkPoints = 100;
       for (let j = 0; j < checkPoints; j++) {
         const idx = Math.floor(channelData.length * (j / checkPoints));
         if (Math.abs(channelData[idx]) > peakThreshold) {
           hasPeaks = true;
-          console.log(`Found peak at sample ${idx}: ${channelData[idx]}`);
+          analyzeReport.results.peaksDetails.push({
+            channel: i + 1,       // Номер канала с пиком
+            index: idx,           // Индекс сэмпла с пиком
+            value: channelData[idx] // Значение пика
+          });
           break;
         }
       }
     }
-    console.log(`Peak detection result: ${hasPeaks ? 'Peaks found' : 'No peaks found'}`);
-
-    // Return true if average RMS is above threshold or if peaks were detected
-    const result = avgRms > silenceThreshold || hasPeaks;
-    console.log(`=== hasSound DEBUG END === Final result: ${result}`);
-    return result;
+    
+    analyzeReport.results.hasPeaks = hasPeaks;  // Найдены ли пики
+    
+    // Определяем итоговый результат (звук есть, если RMS > порога ИЛИ найдены пики)
+    const result = avgRms > threshold || hasPeaks;
+    analyzeReport.results.finalResult = result;  // Итоговый результат анализа
+    
+    // Возвращаем результат и отчет
+    return {
+      hasSoundResult: result,
+      analyzeReport
+    };
   } catch (error) {
-    console.error('Error analyzing audio:', error);
-    console.log(`=== hasSound DEBUG END === Error occurred`);
-    return false; // Return false on error (e.g., invalid blob or decoding failure)
+    // В случае ошибки анализа
+    analyzeReport.error = `Analysis error: ${error.message}`;
+    return { hasSoundResult: false, analyzeReport };
   }
 }
 
