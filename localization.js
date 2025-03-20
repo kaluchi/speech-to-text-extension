@@ -340,6 +340,10 @@ const TRANSLATIONS = {
   "api_key_empty": {
     en: "API key cannot be empty",
     ru: "API ключ не может быть пустым"
+  },
+  "recognition_language_info": {
+    en: "Select the recognition language to improve accuracy.",
+    ru: "Выберите язык распознавания для повышения точности."
   }
 };
 
