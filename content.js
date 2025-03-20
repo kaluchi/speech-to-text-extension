@@ -1230,18 +1230,25 @@ function insertIntoInputField(element, text) {
 function insertRecognizedText(element, text) {
   if (!element) return false;
   
-  // Проверяем тип элемента и используем соответствующую функцию
+  // Используем объект стратегий вместо цепочки if/else
+  const insertStrategies = {
+    'contenteditable': (el, txt) => insertIntoContentEditable(el, txt),
+    'input': (el, txt) => insertIntoInputField(el, txt),
+    'textarea': (el, txt) => insertIntoInputField(el, txt)
+  };
+  
+  // Определяем тип элемента
+  let elementType = null;
   if (element.getAttribute('contenteditable') === 'true') {
-    return insertIntoContentEditable(element, text);
-  } else if (
-    (element.tagName === 'INPUT' && 
-     (element.type === 'text' || element.type === 'search' || element.type === '')) ||
-    element.tagName === 'TEXTAREA'
-  ) {
-    return insertIntoInputField(element, text);
+    elementType = 'contenteditable';
+  } else if (element.tagName === 'INPUT' && ['text', 'search', ''].includes(element.type)) {
+    elementType = 'input';
+  } else if (element.tagName === 'TEXTAREA') {
+    elementType = 'textarea';
   }
   
-  return false;
+  // Применяем соответствующую стратегию
+  return elementType ? insertStrategies[elementType](element, text) : false;
 }
 
 // Основная функция для вставки распознанного текста с поддержкой отмены (Cmd+Z)
