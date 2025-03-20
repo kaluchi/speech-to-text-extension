@@ -58,54 +58,27 @@ loadSettings();
 // Слушаем изменения настроек
 try {
   if (chrome.storage && chrome.storage.onChanged) {
-  chrome.storage.onChanged.addListener((changes, areaName) => {
+    chrome.storage.onChanged.addListener((changes, areaName) => {
       if (areaName === 'sync') {
-        if (changes.apiKey) {
-          settings.apiKey = changes.apiKey.newValue;
-        }
-        if (changes.interfaceLanguage) {
-          settings.interfaceLanguage = changes.interfaceLanguage.newValue;
-          // Применяем изменение языка интерфейса
-          if (window.i18n && settings.interfaceLanguage) {
-            window.i18n.setLanguage(settings.interfaceLanguage);
+        // Обрабатываем изменения всех настроек одним циклом
+        const updatedSettings = {};
+        
+        for (const [key, { newValue }] of Object.entries(changes)) {
+          if (settings.hasOwnProperty(key)) {
+            settings[key] = newValue;
+            updatedSettings[key] = key === 'apiKey' ? (newValue ? newValue.length : 0) : newValue;
           }
         }
-        if (changes.languageCode) {
-          settings.languageCode = changes.languageCode.newValue;
+        
+        // Применяем изменение языка интерфейса, если он обновился
+        if (changes.interfaceLanguage && window.i18n) {
+          window.i18n.setLanguage(settings.interfaceLanguage);
         }
-        if (changes.tagAudioEvents) {
-          settings.tagAudioEvents = changes.tagAudioEvents.newValue;
+        
+        // Логируем обновленные настройки
+        if (Object.keys(updatedSettings).length > 0) {
+          console.log("Настройки обновлены:", JSON.stringify(updatedSettings));
         }
-        if (changes.timestampsGranularity) {
-          settings.timestampsGranularity = changes.timestampsGranularity.newValue;
-        }
-        if (changes.diarize) {
-          settings.diarize = changes.diarize.newValue;
-        }
-        if (changes.numSpeakers) {
-          settings.numSpeakers = changes.numSpeakers.newValue;
-        }
-        if (changes.biasedKeywords) {
-          settings.biasedKeywords = changes.biasedKeywords.newValue;
-        }
-        if (changes.debugAudio) {
-          settings.debugAudio = changes.debugAudio.newValue;
-        }
-        if (changes.showRecordingMask) {
-          settings.showRecordingMask = changes.showRecordingMask.newValue;
-        }
-        console.log("Настройки обновлены:", JSON.stringify({
-          apiKeyLength: settings.apiKey ? settings.apiKey.length : 0,
-          interfaceLanguage: settings.interfaceLanguage, // Логируем язык интерфейса
-          languageCode: settings.languageCode,
-          tagAudioEvents: settings.tagAudioEvents,
-          timestampsGranularity: settings.timestampsGranularity,
-          diarize: settings.diarize,
-          numSpeakers: settings.numSpeakers,
-          biasedKeywords: settings.biasedKeywords,
-          debugAudio: settings.debugAudio,
-          showRecordingMask: settings.showRecordingMask
-        }));
       }
     });
     console.log("Слушатель изменений настроек успешно установлен");
