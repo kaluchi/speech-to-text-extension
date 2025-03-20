@@ -189,77 +189,80 @@ async function analyzeAudioForSound(audioBlob, threshold) {
 // Функция для воспроизведения записи
 function playRecording(audioBlob) {
   try {
-    // Создаем URL для Blob
-    const audioUrl = URL.createObjectURL(audioBlob);
-    
     // Проверяем, на какой странице мы находимся
-    const isRestrictedPage = window.location.href.startsWith('chrome://') || 
-                            window.location.href.startsWith('about:');
-    
-    if (isRestrictedPage) {
-      // На защищенных страницах просто сохраняем файл
+    if (isRestrictedPage(window.location.href)) {
       console.log('Запись на системной странице. Создание элемента аудио невозможно из-за ограничений CSP.');
-      // Предлагаем скачать файл
       downloadRecording(audioBlob);
       return;
     }
     
-    // Безопасное удаление предыдущего контейнера (без innerHTML)
-    const existingContainer = document.getElementById('audio-container');
-    if (existingContainer) {
-      while (existingContainer.firstChild) {
-        existingContainer.removeChild(existingContainer.firstChild);
-      }
-    }
+    // Создаем URL для Blob
+    const audioUrl = URL.createObjectURL(audioBlob);
     
-    // Создаем или получаем контейнер
-    const audioContainer = existingContainer || createAudioContainer();
+    // Получаем или создаем контейнер для аудио
+    const audioContainer = setupAudioContainer();
     
-    // Создаем временный аудио элемент
-    const audio = document.createElement('audio');
-    audio.controls = true;
-    audio.src = audioUrl;
-    audioContainer.appendChild(audio);
+    // Создаем аудио элемент и добавляем элементы управления
+    setupAudioElement(audioContainer, audioUrl, audioBlob);
     
-    // Функция для безопасного удаления контейнера и освобождения ресурсов
-    const cleanup = () => {
-      URL.revokeObjectURL(audioUrl);
-      if (audioContainer && audioContainer.parentNode) {
-        audioContainer.remove();
-      }
-      // Удаляем все обработчики событий
-      audio.onended = null;
-      audio.onerror = null;
-      audio.onpause = null;
-    };
-
-    // Добавляем обработчики событий
-    audio.onended = cleanup;
-    audio.onerror = (error) => {
-      console.error('Ошибка воспроизведения аудио:', error);
-      cleanup();
-    };
-
-
-    // Добавляем информацию о записи
-    const infoDiv = document.createElement('div');
-    infoDiv.textContent = i18n.getTranslation('recording_info', audioBlob.type, (audioBlob.size / 1024).toFixed(1));
-    audioContainer.appendChild(infoDiv);
-    
-    // Добавляем кнопку скачивания
-    const downloadButton = document.createElement('button');
-    downloadButton.textContent = i18n.getTranslation('download_recording');
-    downloadButton.onclick = () => downloadRecording(audioBlob);
-    downloadButton.style.cssText = 'margin-top: 10px; padding: 5px 10px;';
-    audioContainer.appendChild(downloadButton);
-    
-    // Автоматически воспроизводим
-    audio.play().catch(err => console.log('Автоматическое воспроизведение не разрешено:', err));
   } catch (err) {
     console.error('Ошибка при воспроизведении записи:', err);
-    // В случае ошибки предлагаем скачать файл
     downloadRecording(audioBlob);
   }
+}
+
+// Создание и настройка контейнера для аудио
+function setupAudioContainer() {
+  const existingContainer = document.getElementById('audio-container');
+  if (existingContainer) {
+    while (existingContainer.firstChild) {
+      existingContainer.removeChild(existingContainer.firstChild);
+    }
+    return existingContainer;
+  }
+  
+  return createAudioContainer();
+}
+
+// Создание и настройка аудио элемента с элементами управления
+function setupAudioElement(container, audioUrl, audioBlob) {
+  // Создаем временный аудио элемент
+  const audio = document.createElement('audio');
+  audio.controls = true;
+  audio.src = audioUrl;
+  container.appendChild(audio);
+  
+  // Функция для очистки ресурсов
+  const cleanup = () => {
+    URL.revokeObjectURL(audioUrl);
+    if (container && container.parentNode) {
+      container.remove();
+    }
+    audio.onended = null;
+    audio.onerror = null;
+  };
+
+  // Добавляем обработчики событий
+  audio.onended = cleanup;
+  audio.onerror = (error) => {
+    console.error('Ошибка воспроизведения аудио:', error);
+    cleanup();
+  };
+
+  // Добавляем информацию о записи
+  const infoDiv = document.createElement('div');
+  infoDiv.textContent = i18n.getTranslation('recording_info', audioBlob.type, (audioBlob.size / 1024).toFixed(1));
+  container.appendChild(infoDiv);
+  
+  // Добавляем кнопку скачивания
+  const downloadButton = document.createElement('button');
+  downloadButton.textContent = i18n.getTranslation('download_recording');
+  downloadButton.onclick = () => downloadRecording(audioBlob);
+  downloadButton.style.cssText = 'margin-top: 10px; padding: 5px 10px;';
+  container.appendChild(downloadButton);
+  
+  // Автоматически воспроизводим
+  audio.play().catch(err => console.log('Автоматическое воспроизведение не разрешено:', err));
 }
 
 // Функция для скачивания записи
