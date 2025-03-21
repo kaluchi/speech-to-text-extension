@@ -1,5 +1,6 @@
 /**
  * Сервис для работы с DOM элементами
+ * Инкапсулирует все взаимодействия с document
  */
 class PageObjectDomService {
   constructor(pageObject) {
@@ -11,6 +12,22 @@ class PageObjectDomService {
    */
   init() {
     // Ничего не делаем при инициализации
+  }
+
+  /**
+   * Получает текущий активный элемент
+   * @returns {HTMLElement} - Текущий активный элемент
+   */
+  getActiveElement() {
+    return document.activeElement;
+  }
+
+  /**
+   * Получает элемент body
+   * @returns {HTMLElement} - Элемент body
+   */
+  getBody() {
+    return document.body;
   }
 
   /**
@@ -47,6 +64,15 @@ class PageObjectDomService {
   }
 
   /**
+   * Создает текстовый узел
+   * @param {string} text - Текст для узла
+   * @returns {Text} - Созданный текстовый узел
+   */
+  createTextNode(text) {
+    return document.createTextNode(text);
+  }
+
+  /**
    * Добавляет элемент в родительский элемент
    * @param {HTMLElement} parent - Родительский элемент
    * @param {HTMLElement} child - Дочерний элемент
@@ -57,6 +83,15 @@ class PageObjectDomService {
   }
 
   /**
+   * Добавляет элемент в body
+   * @param {HTMLElement} child - Дочерний элемент
+   * @returns {HTMLElement} - Добавленный элемент
+   */
+  appendToBody(child) {
+    return document.body.appendChild(child);
+  }
+
+  /**
    * Удаляет элемент из DOM
    * @param {HTMLElement} element - Элемент для удаления
    */
@@ -64,36 +99,6 @@ class PageObjectDomService {
     if (element && element.parentNode) {
       element.parentNode.removeChild(element);
     }
-  }
-
-  /**
-   * Очищает содержимое элемента
-   * @param {HTMLElement} element - Элемент для очистки
-   */
-  clearElement(element) {
-    if (element) {
-      element.innerHTML = '';
-    }
-  }
-
-  /**
-   * Находит элемент по селектору
-   * @param {string} selector - CSS селектор
-   * @param {HTMLElement} parent - Родительский элемент (по умолчанию document)
-   * @returns {HTMLElement|null} - Найденный элемент или null
-   */
-  querySelector(selector, parent = document) {
-    return parent.querySelector(selector);
-  }
-
-  /**
-   * Находит все элементы по селектору
-   * @param {string} selector - CSS селектор
-   * @param {HTMLElement} parent - Родительский элемент (по умолчанию document)
-   * @returns {NodeList} - Список найденных элементов
-   */
-  querySelectorAll(selector, parent = document) {
-    return parent.querySelectorAll(selector);
   }
 
   /**
@@ -114,67 +119,154 @@ class PageObjectDomService {
   }
 
   /**
-   * Проверяет, находится ли элемент в видимой области
+   * Получает текущее выделение в документе
+   * @returns {Selection} - Текущее выделение
+   */
+  getSelection() {
+    return window.getSelection();
+  }
+
+  /**
+   * Добавляет обработчик события к document
+   * @param {string} eventType - Тип события
+   * @param {Function} handler - Функция обработчика
+   * @param {Object} options - Опции события (capture, once, passive)
+   */
+  addDocumentEventListener(eventType, handler, options = {}) {
+    document.addEventListener(eventType, handler, options);
+  }
+
+  /**
+   * Удаляет обработчик события с document
+   * @param {string} eventType - Тип события
+   * @param {Function} handler - Функция обработчика
+   * @param {Object} options - Опции события
+   */
+  removeDocumentEventListener(eventType, handler, options = {}) {
+    document.removeEventListener(eventType, handler, options);
+  }
+
+  /**
+   * Добавляет обработчик события к элементу
+   * @param {HTMLElement} element - DOM элемент
+   * @param {string} eventType - Тип события
+   * @param {Function} handler - Функция обработчика
+   * @param {Object} options - Опции события
+   */
+  addEventListener(element, eventType, handler, options = {}) {
+    element.addEventListener(eventType, handler, options);
+  }
+
+  /**
+   * Удаляет обработчик события с элемента
+   * @param {HTMLElement} element - DOM элемент
+   * @param {string} eventType - Тип события
+   * @param {Function} handler - Функция обработчика
+   * @param {Object} options - Опции события
+   */
+  removeEventListener(element, eventType, handler, options = {}) {
+    element.removeEventListener(eventType, handler, options);
+  }
+
+  /**
+   * Создает и отправляет пользовательское событие в document
+   * @param {string} eventName - Имя события
+   * @param {Object} detail - Данные события
+   * @param {boolean} bubbles - Флаг всплытия
+   * @param {boolean} cancelable - Флаг отменяемости
+   * @returns {CustomEvent} - Созданное событие
+   */
+  dispatchCustomEvent(eventName, detail = {}, bubbles = true, cancelable = true) {
+    const event = new CustomEvent(eventName, {
+      detail,
+      bubbles,
+      cancelable
+    });
+    
+    document.dispatchEvent(event);
+    return event;
+  }
+
+  /**
+   * Генерирует DOM событие и отправляет его на элемент
+   * @param {HTMLElement} element - Элемент для отправки события
+   * @param {string} eventName - Имя события
+   * @param {boolean} bubbles - Флаг всплытия
+   * @param {boolean} cancelable - Флаг отменяемости
+   * @returns {Event} - Созданное событие
+   */
+  dispatchEvent(element, eventName, bubbles = true, cancelable = true) {
+    const event = new Event(eventName, { bubbles, cancelable });
+    element.dispatchEvent(event);
+    return event;
+  }
+
+  /**
+   * Проверяет, содержится ли элемент в документе
    * @param {HTMLElement} element - Проверяемый элемент
-   * @returns {boolean} - true, если элемент видим
+   * @returns {boolean} - true, если элемент в документе
    */
-  isVisible(element) {
-    if (!element) return false;
-    
-    const style = window.getComputedStyle(element);
-    return style.display !== 'none' && style.visibility !== 'hidden' && element.offsetWidth > 0 && element.offsetHeight > 0;
+  isElementInDocument(element) {
+    return document.contains(element);
   }
 
   /**
-   * Получает или устанавливает текстовое содержимое элемента
-   * @param {HTMLElement} element - Элемент
-   * @param {string} [value] - Новое значение (если не указано, возвращает текущее)
-   * @returns {string|undefined} - Текущее текстовое содержимое или undefined
+   * Находит элемент по селектору
+   * @param {string} selector - CSS селектор
+   * @returns {HTMLElement} - Найденный элемент или null
    */
-  textContent(element, value) {
-    if (!element) return undefined;
-    
-    if (value !== undefined) {
-      element.textContent = value;
-      return undefined;
-    }
-    
-    return element.textContent;
+  querySelector(selector) {
+    return document.querySelector(selector);
   }
 
   /**
-   * Получает или устанавливает HTML содержимое элемента
-   * @param {HTMLElement} element - Элемент
-   * @param {string} [value] - Новое значение (если не указано, возвращает текущее)
-   * @returns {string|undefined} - Текущее HTML содержимое или undefined
+   * Находит все элементы по селектору
+   * @param {string} selector - CSS селектор
+   * @returns {NodeList} - Список найденных элементов
    */
-  innerHTML(element, value) {
-    if (!element) return undefined;
-    
-    if (value !== undefined) {
-      element.innerHTML = value;
-      return undefined;
-    }
-    
-    return element.innerHTML;
+  querySelectorAll(selector) {
+    return document.querySelectorAll(selector);
   }
 
   /**
-   * Устанавливает или снимает класс у элемента
-   * @param {HTMLElement} element - Элемент
-   * @param {string} className - Имя класса
-   * @param {boolean} [state] - Состояние (true - добавить, false - удалить)
+   * Находит элемент по ID
+   * @param {string} id - Идентификатор элемента
+   * @returns {HTMLElement} - Найденный элемент или null
    */
-  toggleClass(element, className, state) {
-    if (!element) return;
-    
-    if (state === undefined) {
-      element.classList.toggle(className);
-    } else if (state) {
-      element.classList.add(className);
-    } else {
-      element.classList.remove(className);
-    }
+  getElementById(id) {
+    return document.getElementById(id);
+  }
+
+  /**
+   * Получает текущий URL документа
+   * @returns {string} - URL документа
+   */
+  getDocumentUrl() {
+    return document.URL;
+  }
+
+  /**
+   * Получает заголовок документа
+   * @returns {string} - Заголовок документа
+   */
+  getDocumentTitle() {
+    return document.title;
+  }
+
+  /**
+   * Получает тип кодировки документа
+   * @returns {string} - Тип кодировки
+   */
+  getDocumentCharset() {
+    return document.characterSet;
+  }
+
+  /**
+   * Проверяет, полностью ли загружен документ
+   * @returns {boolean} - true, если документ загружен
+   */
+  isDocumentReady() {
+    return document.readyState === 'complete';
   }
 }
 

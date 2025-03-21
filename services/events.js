@@ -23,7 +23,8 @@ class PageObjectEventsService {
    * @returns {Function} - Функция для удаления обработчика
    */
   addDocumentListener(eventType, handler, options = {}) {
-    document.addEventListener(eventType, handler, options);
+    const { dom } = this._page;
+    dom.addDocumentEventListener(eventType, handler, options);
     
     // Сохраняем обработчик для возможности его удаления
     if (!this._documentListeners.has(eventType)) {
@@ -40,7 +41,8 @@ class PageObjectEventsService {
    * @param {Function} handler - Функция обработчика
    */
   removeDocumentListener(eventType, handler) {
-    document.removeEventListener(eventType, handler);
+    const { dom } = this._page;
+    dom.removeDocumentEventListener(eventType, handler);
     
     if (this._documentListeners.has(eventType)) {
       this._documentListeners.get(eventType).delete(handler);
@@ -138,24 +140,20 @@ class PageObjectEventsService {
    * @returns {CustomEvent} - Созданное событие
    */
   dispatchCustomEvent(eventName, detail = {}, bubbles = true, cancelable = true) {
-    const event = new CustomEvent(eventName, {
-      detail,
-      bubbles,
-      cancelable
-    });
-    
-    document.dispatchEvent(event);
-    return event;
+    const { dom } = this._page;
+    return dom.dispatchCustomEvent(eventName, detail, bubbles, cancelable);
   }
 
   /**
    * Очищает все обработчики событий
    */
   clearAllListeners() {
+    const { dom } = this._page;
+    
     // Очистка document listeners
     this._documentListeners.forEach((handlers, eventType) => {
       handlers.forEach(handler => {
-        document.removeEventListener(eventType, handler);
+        dom.removeDocumentEventListener(eventType, handler);
       });
     });
     this._documentListeners.clear();

@@ -26,10 +26,12 @@ class PageObjectTextService {
    * @returns {Promise<boolean>} - true, если вставка прошла успешно
    */
   async insertText(text) {
+    const { logger, clipboard, dom } = this._page;
+    
     try {
       // Диагностика активного элемента
-      const activeElement = document.activeElement;
-      this._page.logger.info(
+      const activeElement = dom.getActiveElement();
+      logger.info(
         'Попытка вставки текста. Активный элемент:', 
         activeElement ? activeElement.tagName : 'отсутствует', 
         'contentEditable:', activeElement ? activeElement.isContentEditable : false
@@ -37,18 +39,19 @@ class PageObjectTextService {
       
       // Проверка ограничений по домену
       if (this._isPageRestricted(window.location.href)) {
-        this._page.logger.info('Вставка текста запрещена на данном домене', window.location.href);
-        await this._page.clipboard.write(text);
+        logger.info('Вставка текста запрещена на данном домене', window.location.href);
+        await clipboard.write(text);
         return false;
       }
       
       // Проверка активного элемента
-      if (!activeElement || activeElement === document.body || !this._page.dom.isEditableElement(activeElement)) {
-        this._page.logger.info('Активный элемент не является редактируемым, причина:', 
+      const body = dom.getBody();
+      if (!activeElement || activeElement === body || !dom.isEditableElement(activeElement)) {
+        logger.info('Активный элемент не является редактируемым, причина:', 
           !activeElement ? 'отсутствует' : 
-          (activeElement === document.body ? 'это body' : 'не редактируемый элемент'));
-        this._page.logger.info('Активный элемент не является редактируемым, копируем в буфер обмена');
-        await this._page.clipboard.write(text);
+          (activeElement === body ? 'это body' : 'не редактируемый элемент'));
+        logger.info('Активный элемент не является редактируемым, копируем в буфер обмена');
+        await clipboard.write(text);
         return false;
       }
       
@@ -62,8 +65,8 @@ class PageObjectTextService {
         this._insertIntoFormField(activeElement, preparedText);
       } else {
         // Неизвестный тип элемента
-        this._page.logger.warn('Неизвестный тип редактируемого элемента:', activeElement.tagName);
-        await this._page.clipboard.write(text);
+        logger.warn('Неизвестный тип редактируемого элемента:', activeElement.tagName);
+        await clipboard.write(text);
         return false;
       }
       
@@ -72,13 +75,13 @@ class PageObjectTextService {
       
       return true;
     } catch (error) {
-      this._page.logger.error('Ошибка при вставке текста:', error);
+      logger.error('Ошибка при вставке текста:', error);
       
       // В случае ошибки пытаемся скопировать в буфер обмена
       try {
-        await this._page.clipboard.write(text);
+        await clipboard.write(text);
       } catch (clipboardError) {
-        this._page.logger.error('Ошибка при копировании в буфер обмена:', clipboardError);
+        logger.error('Ошибка при копировании в буфер обмена:', clipboardError);
       }
       
       return false;
@@ -110,7 +113,7 @@ class PageObjectTextService {
     let trimmedText = text.trim();
     
     // Проверяем, нужно ли добавить пробел в начале
-    const activeElement = document.activeElement;
+    const activeElement = this._page.dom.getActiveElement();
     if (activeElement && this._shouldAddLeadingSpace(activeElement)) {
       trimmedText = ' ' + trimmedText;
     }
@@ -138,6 +141,8 @@ class PageObjectTextService {
    * @private
    */
   _shouldAddLeadingSpace(element) {
+    const { logger } = this._page;
+    
     try {
       // Получаем текущий текст и позицию курсора
       const currentText = this._getCurrentText(element);
@@ -149,7 +154,7 @@ class PageObjectTextService {
       const charBeforeCursor = currentText.charAt(cursorPos - 1);
       return charBeforeCursor !== ' ' && charBeforeCursor !== '\n' && charBeforeCursor !== '';
     } catch (error) {
-      this._page.logger.warn('Ошибка при проверке необходимости добавления пробела в начале:', error);
+      logger.warn('Ошибка при проверке необходимости добавления пробела в начале:', error);
       return false;
     }
   }
@@ -161,6 +166,8 @@ class PageObjectTextService {
    * @private
    */
   _shouldAddTrailingSpace(element) {
+    const { logger } = this._page;
+    
     try {
       // Получаем текущий текст и позицию курсора
       const currentText = this._getCurrentText(element);
@@ -172,7 +179,7 @@ class PageObjectTextService {
       const charAfterCursor = currentText.charAt(cursorPos);
       return charAfterCursor !== ' ' && charAfterCursor !== '\n' && charAfterCursor !== '';
     } catch (error) {
-      this._page.logger.warn('Ошибка при проверке необходимости добавления пробела в конце:', error);
+      logger.warn('Ошибка при проверке необходимости добавления пробела в конце:', error);
       return false;
     }
   }
@@ -223,10 +230,12 @@ class PageObjectTextService {
    * @private
    */
   _getCursorPosition(element) {
+    const { dom } = this._page;
+    
     if (element.tagName === 'TEXTAREA' || element.tagName === 'INPUT') {
       return element.selectionStart;
     } else if (element.isContentEditable) {
-      const selection = window.getSelection();
+      const selection = dom.getSelection();
       if (selection.rangeCount > 0) {
         const range = selection.getRangeAt(0);
         return this._getTextOffsetInContentEditable(element, range.startContainer, range.startOffset);
@@ -277,8 +286,10 @@ class PageObjectTextService {
    * @private
    */
   _insertIntoContentEditable(element, text) {
+    const { logger, dom } = this._page;
+    
     try {
-      const selection = window.getSelection();
+      const selection = dom.getSelection();
       if (selection.rangeCount > 0) {
         const range = selection.getRangeAt(0);
         
@@ -286,7 +297,7 @@ class PageObjectTextService {
         range.deleteContents();
         
         // Вставляем новый текст
-        const textNode = document.createTextNode(text);
+        const textNode = dom.createTextNode(text);
         range.insertNode(textNode);
         
         // Устанавливаем курсор в конец вставленного текста
@@ -295,10 +306,10 @@ class PageObjectTextService {
         selection.removeAllRanges();
         selection.addRange(range);
         
-        this._page.logger.info('Текст вставлен в contenteditable');
+        logger.info('Текст вставлен в contenteditable');
       }
     } catch (error) {
-      this._page.logger.error('Ошибка при вставке в contenteditable:', error);
+      logger.error('Ошибка при вставке в contenteditable:', error);
       throw error;
     }
   }
@@ -310,6 +321,8 @@ class PageObjectTextService {
    * @private
    */
   _insertIntoFormField(element, text) {
+    const { logger } = this._page;
+    
     try {
       const start = element.selectionStart;
       const end = element.selectionEnd;
@@ -321,9 +334,9 @@ class PageObjectTextService {
       // Устанавливаем курсор в конец вставленного текста
       element.selectionStart = element.selectionEnd = start + text.length;
       
-      this._page.logger.info('Текст вставлен в поле формы');
+      logger.info('Текст вставлен в поле формы');
     } catch (error) {
-      this._page.logger.error('Ошибка при вставке в поле формы:', error);
+      logger.error('Ошибка при вставке в поле формы:', error);
       throw error;
     }
   }
@@ -334,17 +347,19 @@ class PageObjectTextService {
    * @private
    */
   _dispatchChangeEvent(element) {
+    const { logger, dom } = this._page;
+    
     try {
       // Для input и textarea
       if (element.tagName === 'INPUT' || element.tagName === 'TEXTAREA') {
-        element.dispatchEvent(new Event('input', { bubbles: true }));
-        element.dispatchEvent(new Event('change', { bubbles: true }));
+        dom.dispatchEvent(element, 'input', true);
+        dom.dispatchEvent(element, 'change', true);
       } else if (element.isContentEditable) {
         // Для contenteditable
-        element.dispatchEvent(new Event('input', { bubbles: true }));
+        dom.dispatchEvent(element, 'input', true);
       }
     } catch (error) {
-      this._page.logger.warn('Ошибка при генерации события изменения:', error);
+      logger.warn('Ошибка при генерации события изменения:', error);
     }
   }
 }

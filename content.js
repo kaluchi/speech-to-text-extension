@@ -18,16 +18,26 @@ window.page = new PageObject();
   } catch (error) {
     console.error('Ошибка при инициализации:', error);
     
+    // Создаем минимальный DOM сервис для резервного режима
+    class MinimalDomService {
+      addDocumentEventListener(eventType, handler, options = {}) {
+        document.addEventListener(eventType, handler, options);
+      }
+    }
+    
     // Обеспечиваем минимальную функциональность в случае ошибки
     const fallbackController = function() {
       console.warn("Используется запасной контроллер клавиш из-за ошибки инициализации PageObject");
+      
+      // Создаем минимальный DOM сервис
+      const minimalDom = new MinimalDomService();
       
       // Определяем целевую клавишу в зависимости от платформы
       const isMac = navigator.platform.toLowerCase().includes("mac");
       const targetKey = isMac ? "Meta" : "Control";
       
       // Настраиваем минимальные обработчики для базовой работы
-      document.addEventListener('keydown', (event) => {
+      minimalDom.addDocumentEventListener('keydown', (event) => {
         if (event.key === targetKey) {
           console.log(`Нажата клавиша ${targetKey}, но функционал ограничен из-за ошибки инициализации`);
         }

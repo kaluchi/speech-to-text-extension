@@ -22,6 +22,8 @@ class PageObjectUiService {
    * @returns {HTMLElement} - Элемент маски
    */
   showMask(color = this._defaultMaskColor) {
+    const { dom } = this._page;
+    
     // Если маска уже существует, просто показываем её
     if (this._mask) {
       this._mask.style.backgroundColor = color;
@@ -30,7 +32,7 @@ class PageObjectUiService {
     }
     
     // Создаем новую маску
-    this._mask = this._page.dom.createElement('div', 
+    this._mask = dom.createElement('div', 
       { id: 'speech-to-text-mask' }, 
       {
         position: 'fixed',
@@ -45,7 +47,7 @@ class PageObjectUiService {
       }
     );
     
-    this._page.dom.appendChild(document.body, this._mask);
+    dom.appendToBody(this._mask);
     return this._mask;
   }
 
@@ -53,8 +55,10 @@ class PageObjectUiService {
    * Скрывает затемняющую маску
    */
   hideMask() {
+    const { dom } = this._page;
+    
     if (this._mask) {
-      this._page.dom.removeElement(this._mask);
+      dom.removeElement(this._mask);
       this._mask = null;
     }
   }
@@ -75,13 +79,15 @@ class PageObjectUiService {
    * @returns {HTMLElement} - Элемент аудиоплеера
    */
   showAudioPlayer(audioBlob) {
+    const { dom } = this._page;
+    
     // Если плеер уже существует, удаляем его
     if (this._audioPlayer) {
-      this._page.dom.removeElement(this._audioPlayer);
+      dom.removeElement(this._audioPlayer);
     }
     
     // Создаем новый плеер
-    this._audioPlayer = this._page.dom.createElement('div', 
+    this._audioPlayer = dom.createElement('div', 
       { id: 'speech-to-text-audio-player' }, 
       {
         position: 'fixed',
@@ -100,7 +106,7 @@ class PageObjectUiService {
     
     // Создаем аудио-элемент
     const audioUrl = URL.createObjectURL(audioBlob);
-    const audio = this._page.dom.createElement('audio', 
+    const audio = dom.createElement('audio', 
       { 
         controls: true,
         src: audioUrl,
@@ -112,29 +118,29 @@ class PageObjectUiService {
     );
     
     // Создаем заголовок
-    const title = this._page.dom.createElement('div', {}, {
+    const title = dom.createElement('div', {}, {
       fontWeight: 'bold',
       marginBottom: '5px'
     }, window.i18n?.getTranslation('debug_audio_preview') || 'Предпросмотр записи');
     
     // Создаем кнопку закрытия
-    const closeButton = this._page.dom.createElement('button', {}, {
+    const closeButton = dom.createElement('button', {}, {
       marginTop: '5px',
       padding: '2px 5px',
       cursor: 'pointer'
     }, window.i18n?.getTranslation('close') || 'Закрыть');
     
     // Добавляем обработчик закрытия
-    closeButton.addEventListener('click', () => {
+    dom.addEventListener(closeButton, 'click', () => {
       this.hideAudioPlayer();
       URL.revokeObjectURL(audioUrl);
     });
     
     // Собираем плеер
-    this._page.dom.appendChild(this._audioPlayer, title);
-    this._page.dom.appendChild(this._audioPlayer, audio);
-    this._page.dom.appendChild(this._audioPlayer, closeButton);
-    this._page.dom.appendChild(document.body, this._audioPlayer);
+    dom.appendChild(this._audioPlayer, title);
+    dom.appendChild(this._audioPlayer, audio);
+    dom.appendChild(this._audioPlayer, closeButton);
+    dom.appendToBody(this._audioPlayer);
     
     return this._audioPlayer;
   }
@@ -143,8 +149,10 @@ class PageObjectUiService {
    * Скрывает аудиоплеер
    */
   hideAudioPlayer() {
+    const { dom } = this._page;
+    
     if (this._audioPlayer) {
-      this._page.dom.removeElement(this._audioPlayer);
+      dom.removeElement(this._audioPlayer);
       this._audioPlayer = null;
     }
   }
@@ -157,7 +165,9 @@ class PageObjectUiService {
    * @returns {HTMLElement} - Элемент уведомления
    */
   showNotification(message, type = 'info', duration = 3000) {
-    const notification = this._page.dom.createElement('div', 
+    const { dom } = this._page;
+    
+    const notification = dom.createElement('div', 
       { 
         id: `speech-to-text-notification-${Date.now()}` 
       }, 
@@ -198,7 +208,7 @@ class PageObjectUiService {
     }
     
     // Добавляем на страницу
-    this._page.dom.appendChild(document.body, notification);
+    dom.appendToBody(notification);
     
     // Анимация появления
     setTimeout(() => {
@@ -209,7 +219,7 @@ class PageObjectUiService {
     setTimeout(() => {
       notification.style.opacity = '0';
       setTimeout(() => {
-        this._page.dom.removeElement(notification);
+        dom.removeElement(notification);
       }, 300);
     }, duration);
     
