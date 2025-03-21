@@ -6,7 +6,7 @@ const DEFAULT_SETTINGS = {
   tagAudioEvents: 'false',
   timestampsGranularity: 'word',
   diarize: 'false',
-  numSpeakers: '',
+  numSpeakers: '1',
   biasedKeywords: [],
   debugAudio: 'false',
   preferredMicrophoneId: '',

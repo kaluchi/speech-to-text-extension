@@ -31,7 +31,7 @@ class PageObjectSpeechApiService {
       ui.changeMaskColor('rgba(255, 165, 0, 0.15)');
       
       // Получаем данные для запроса
-      const { formData, apiKey, language } = await apiRequestBuilder.createElevenLabsRequestData(audioBlob);
+      const { formData, apiKey } = await apiRequestBuilder.createElevenLabsRequestData(audioBlob);
       
       // Отправляем запрос
       const response = await fetch(this._apiEndpoint, {

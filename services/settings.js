@@ -17,9 +17,7 @@ class PageObjectSettingsService {
       tagAudioEvents: 'false',
       timestampsGranularity: 'word',
       diarize: 'false',
-      // Обновляем numSpeakers, чтобы в нём всегда было допустимое значение (1 или больше)
-      // Если оставить пустую строку, API может преобразовать её в 0, что вызовет ошибку
-      numSpeakers: '2',
+      numSpeakers: '1', // Корректное значение по умолчанию
       biasedKeywords: [],
       showRecordingMask: 'true'
     };
@@ -45,15 +43,6 @@ class PageObjectSettingsService {
       // Получаем актуальные настройки из хранилища
       const items = await chrome.get(this._defaultSettings);
       this._settings = { ...this._defaultSettings, ...items };
-      
-      // Проверим значение numSpeakers, если оно пустое, установим значение по умолчанию
-      if (this._settings.numSpeakers === '') {
-        this._settings.numSpeakers = '2';
-        logger.info('Значение numSpeakers не было установлено, использую значение по умолчанию: 2');
-      } else if (!isNaN(Number(this._settings.numSpeakers)) && Number(this._settings.numSpeakers) < 1) {
-        this._settings.numSpeakers = '2';
-        logger.info('Значение numSpeakers было меньше 1, исправлено на значение по умолчанию: 2');
-      }
       
       logger.debug('Настройки загружены:', this._settings);
       
@@ -85,19 +74,6 @@ class PageObjectSettingsService {
     
     if (this._settings[key] === value) {
       return; // Ничего не изменилось
-    }
-    
-    // Проверяем и исправляем значение numSpeakers
-    if (key === 'numSpeakers') {
-      if (value === '') {
-        // Если значение пустое, установим значение по умолчанию
-        value = '2';
-        logger.info('Установлено значение numSpeakers по умолчанию: 2');
-      } else if (!isNaN(Number(value)) && Number(value) < 1) {
-        // Если значение меньше 1, исправляем
-        value = '2';
-        logger.info('Недопустимое значение numSpeakers исправлено на: 2');
-      }
     }
     
     const oldValue = this._settings[key];
@@ -136,17 +112,6 @@ class PageObjectSettingsService {
     const { chrome, logger } = this._page;
     
     try {
-      // Проверяем и исправляем значение numSpeakers
-      if (newSettings.numSpeakers !== undefined) {
-        if (newSettings.numSpeakers === '') {
-          newSettings.numSpeakers = '2';
-          logger.info('Установлено значение numSpeakers по умолчанию: 2');
-        } else if (!isNaN(Number(newSettings.numSpeakers)) && Number(newSettings.numSpeakers) < 1) {
-          newSettings.numSpeakers = '2';
-          logger.info('Недопустимое значение numSpeakers исправлено на: 2');
-        }
-      }
-    
       // Проверяем изменения и уведомляем подписчиков
       Object.entries(newSettings).forEach(([key, value]) => {
         if (this._settings[key] !== value) {

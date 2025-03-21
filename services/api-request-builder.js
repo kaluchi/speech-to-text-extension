@@ -4,7 +4,6 @@
 class PageObjectApiRequestBuilderService {
   constructor(pageObject) {
     this._page = pageObject;
-    this._defaultLanguage = 'ru';
   }
 
   /**
@@ -17,173 +16,91 @@ class PageObjectApiRequestBuilderService {
   /**
    * Создание FormData для запроса к API ElevenLabs
    * @param {Blob} audioBlob - Аудиоданные для распознавания
-   * @returns {Promise<{formData: FormData, apiKey: string, language: string}>} - FormData для запроса
+   * @returns {Promise<{formData: FormData, apiKey: string}>} - FormData для запроса и API ключ
+   * 
+   * Ключевая ответственность: только заполнение formData обязательными полями
+   * и вставка готовых значений из apiSettings. Без логирования или трансформации значений.
    */
   async createElevenLabsRequestData(audioBlob) {
+    const { logger } = this._page;
+    
+    // Получаем подготовленные настройки и API ключ
+    const { apiSettings, apiKey } = await this._loadApiSettings();
+    
+    // Создаем FormData для отправки
+    const formData = new FormData();
+    
+    // Добавляем только аудиофайл
+    formData.append('file', audioBlob, 'speech.webm');
+    
+    // Добавляем все подготовленные параметры без дополнительных проверок
+    Object.entries(apiSettings).forEach(([key, value]) => {
+      formData.append(key, value);
+    });
+    
+    // Логируем информацию о запросе
+    logger.info(`Подготовлен запрос для распознавания, формат: ${audioBlob.type}, размер: ${audioBlob.size} байт`);
+    
+    return { formData, apiKey };
+  }
+
+  /**
+   * Загрузка и подготовка настроек API из хранилища
+   * @returns {Promise<{apiSettings: Object, apiKey: string}>} - Настройки API и API ключ
+   * @private
+   * 
+   * Ключевая ответственность: 
+   * 1. Получение и проверка API ключа из настроек
+   * 2. Формирование базовых параметров API (model_id, language_code)
+   * 3. Добавление настроек API из пользовательских настроек
+   * 4. Обработка специальных параметров (ключевые слова)
+   * 5. Логирование итоговых настроек для отладки
+   */
+  async _loadApiSettings() {
     const { settings, logger } = this._page;
     
-    // Получаем API ключ из настроек
+    // Получаем и проверяем API ключ
     const apiKey = settings.getValue('apiKey');
     
     if (!apiKey) {
       throw new Error('API ключ не найден в настройках');
     }
     
-    // Определяем язык для распознавания
-    const language = this._determineLanguage();
+    // Создаем пустой объект apiSettings для настроек
+    const apiSettings = {};
     
-    // Логируем начало создания запроса
-    logger.info(`Подготовка запроса для распознавания, формат: ${audioBlob.type}, размер: ${audioBlob.size} байт, язык: ${language}`);
-    
-    // Создаем FormData для отправки
-    const formData = new FormData();
-    
-    // Базовые параметры
-    formData.append('file', audioBlob, 'speech.webm');
-    formData.append('model_id', 'scribe_v1');
-    formData.append('language_code', language);
-    
-    // Получаем настройки из хранилища
-    const apiSettings = await this._loadApiSettings();
-    
-    // Настройки параметров и их значения
-    const params = {
-      // Параметр: [значение из настроек, добавлять ли при undefined]
-      'tag_audio_events': [apiSettings.tag_audio_events, false],
-      'timestamps_granularity': [apiSettings.timestamps_granularity, true],
-      'diarize': [apiSettings.diarize, false]
-      // Удаляем num_speakers из общего списка для отдельной обработки
+    // Функция для добавления настройки только при наличии значения
+    const addSetting = (apiKey, value, transform = (x) => x) => {
+      if (value !== null && value !== undefined) {
+        const transformedValue = transform(value);
+        apiSettings[apiKey] = transformedValue;
+        logger.info(`Настройка ${apiKey}:`, value, '->', transformedValue);
+      }
     };
     
-    // Добавляем параметры запроса
-    for (const [param, [value, addIfUndefined]] of Object.entries(params)) {
-      if (value !== undefined || addIfUndefined) {
-        formData.append(param, value);
-      }
-    }
+    // Функция для добавления настройки из settings
+    const addSettingFromSettings = (apiKey, settingKey, transform = (x) => x) => {
+      const value = settings.getValue(settingKey);
+      addSetting(apiKey, value, transform);
+    };
     
-    // Специальная обработка для num_speakers
-    if (apiSettings.num_speakers !== undefined && apiSettings.num_speakers !== '' && !isNaN(Number(apiSettings.num_speakers))) {
-      const numSpeakers = Number(apiSettings.num_speakers);
-      // Убедимся, что значение >= 1
-      if (numSpeakers >= 1) {
-        formData.append('num_speakers', numSpeakers);
-        logger.info(`Установлено количество говорящих: ${numSpeakers}`);
-      } else {
-        logger.warn(`Некорректное значение num_speakers: ${numSpeakers}, должно быть >= 1. Не добавляем в запрос.`);
-      }
-    } else {
-      // Значение не установлено, значит не добавляем этот параметр совсем
-      logger.info('Параметр num_speakers не установлен, используем автоопределение');
-    }
+    // 1. Добавляем базовые параметры API
+    addSetting('model_id', 'scribe_v1');
+    addSettingFromSettings('language_code', 'languageCode');
     
-    // Добавляем ключевые слова
-    if (apiSettings.biased_keywords?.length > 0) {
-      formData.append('biased_keywords', JSON.stringify(apiSettings.biased_keywords));
-    }
+    // 2. Добавляем настройки из пользовательских настроек
+    addSettingFromSettings('tag_audio_events', 'tagAudioEvents', v => v === 'true');
+    addSettingFromSettings('timestamps_granularity', 'timestampsGranularity');
+    addSettingFromSettings('diarize', 'diarize', v => v === 'true');
+    addSettingFromSettings('num_speakers', 'numSpeakers', v => Number(v));
+    addSettingFromSettings('biased_keywords', 'biasedKeywords', keywords => 
+      Array.isArray(keywords) && keywords.length > 0 ? JSON.stringify(keywords) : null
+    );
     
-    // Отладка: логируем содержимое formData
-    logger.info('Запрос к API сформирован с ключами:', [...formData.keys()]);
-    logger.info('Настройки API для модели scribe_v1:', apiSettings);
+    // 4. Логируем итоговые настройки для отладки
+    logger.info('Итоговые настройки API:', apiSettings);
     
-    return { formData, apiKey, language };
-  }
-
-  /**
-   * Загрузка настроек API из хранилища
-   * @returns {Promise<Object>} - Настройки API
-   * @private
-   */
-  async _loadApiSettings() {
-    const { settings, logger } = this._page;
-    
-    try {
-      // Собираем настройки API из отдельных ключей
-      const apiSettings = {};
-      
-      // Функция для добавления настройки
-      const addSetting = (apiKey, settingKey, transform = (x) => x) => {
-        const value = settings.getValue(settingKey);
-        if (value !== null && value !== undefined) {
-          apiSettings[apiKey] = transform(value);
-          logger.info(`Настройка ${apiKey}:`, value, '->', apiSettings[apiKey]);
-        }
-      };
-      
-      // Добавляем все настройки
-      addSetting('tag_audio_events', 'tagAudioEvents', v => v === 'true');
-      addSetting('timestamps_granularity', 'timestampsGranularity');
-      addSetting('diarize', 'diarize', v => v === 'true');
-      addSetting('num_speakers', 'numSpeakers', v => v === '' ? '' : Number(v));
-      
-      // Ключевые слова
-      const biasedKeywords = settings.getValue('biasedKeywords');
-      if (biasedKeywords && Array.isArray(biasedKeywords) && biasedKeywords.length > 0) {
-        apiSettings.biased_keywords = biasedKeywords;
-        logger.info('Настройка ключевых слов:', biasedKeywords);
-      }
-      
-      // Проверяем, есть ли дополнительные настройки в elevenlabsApiSettings
-      const extraSettings = settings.getValue('elevenlabsApiSettings');
-      if (extraSettings && typeof extraSettings === 'string') {
-        try {
-          // Объединяем с настройками из JSON
-          const parsed = JSON.parse(extraSettings);
-          Object.assign(apiSettings, parsed);
-          logger.info('Дополнительные настройки API:', parsed);
-        } catch (e) {
-          logger.warn('Ошибка при парсинге настроек API:', e);
-        }
-      }
-      
-      logger.info('Итоговые настройки API:', apiSettings);
-      return apiSettings;
-    } catch (error) {
-      logger.warn('Ошибка при загрузке настроек API:', error);
-      return {};
-    }
-  }
-
-  /**
-   * Определение языка для распознавания
-   * @returns {string} - Код языка
-   * @private
-   */
-  _determineLanguage() {
-    const { settings, logger } = this._page;
-    
-    try {
-      // Проверяем настройку автоопределения
-      const autoDetect = settings.getValue('autoDetectLanguage');
-      
-      if (autoDetect === 'false') {
-        // Используем предпочитаемый язык из настроек
-        const preferred = settings.getValue('preferredLanguage');
-        if (preferred) {
-          return preferred;
-        }
-      }
-      
-      // Определяем язык по интерфейсу браузера
-      const browserLang = navigator.language || navigator.userLanguage;
-      
-      if (browserLang) {
-        const langCode = browserLang.split('-')[0].toLowerCase();
-        
-        // Упрощенная проверка поддерживаемых языков
-        const supportedLangs = ['ru', 'en', 'fr', 'de', 'es', 'it', 'pt', 'pl', 'tr', 'nl'];
-        
-        if (supportedLangs.includes(langCode)) {
-          return langCode;
-        }
-      }
-      
-      // По умолчанию русский
-      return this._defaultLanguage;
-    } catch (error) {
-      logger.warn('Ошибка при определении языка:', error);
-      return this._defaultLanguage;
-    }
+    return { apiSettings, apiKey };
   }
 }
 
