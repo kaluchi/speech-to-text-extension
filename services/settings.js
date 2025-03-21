@@ -155,17 +155,15 @@ class PageObjectSettingsService {
    * @returns {Promise<boolean>} - true, если ключ существует
    */
   async checkApiKey() {
-    const { logger, notifications, i18n } = this._page;
+    const { logger, chrome } = this._page;
     const apiKey = this.getValue('apiKey');
     
     if (!apiKey) {
       logger.warn('API ключ не найден');
-      if (notifications) {
-        notifications.showWarning(
-          i18n.getTranslation('missing_api_key') || 
-          'Отсутствует API ключ. Пожалуйста, добавьте его в настройках.'
-        );
-      }
+      
+      // Открываем страницу настроек вместо показа уведомления
+      chrome.openOptionsPage();
+      
       return false;
     }
     
