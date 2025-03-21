@@ -45,8 +45,17 @@ class PageObjectSpeechApiService {
       
       // Проверяем успешность запроса
       if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Ошибка API: ${response.status} ${response.statusText}\n${errorText}`);
+        let errorText = '';
+        let errorJson = null;
+        
+        try {
+          errorJson = await response.json();
+          errorText = JSON.stringify(errorJson);
+        } catch (e) {
+          errorText = await response.text();
+        }
+        
+        throw new Error(`Ошибка API: ${response.status} ${errorText}`);
       }
       
       // Получаем результат
@@ -96,6 +105,19 @@ class PageObjectSpeechApiService {
       
       const errorMessage = error.message || error.toString();
       
+      // Обработка ошибок валидации API (422)
+      if (errorMessage.includes('422')) {
+        // Проверка на ошибку с числом говорящих
+        if (errorMessage.includes('num_speakers') && errorMessage.includes('greater than or equal')) {
+          return i18n.getTranslation('num_speakers_error') || 
+                'Ошибка в настройках: количество говорящих должно быть 1 или больше';
+        }
+        
+        // Общая ошибка валидации
+        return i18n.getTranslation('api_validation_error') || 
+               'Ошибка валидации API: проверьте настройки расширения';
+      }
+      
       // Таблица соответствий ошибок
       const errorMap = {
         '"file"],"msg":"Field required"': 'Ошибка при отправке аудио: не удалось прикрепить файл',
@@ -115,8 +137,14 @@ class PageObjectSpeechApiService {
         }
       }
       
-      return i18n.getTranslation('speech_recognition_error', errorMessage) || 
-             `Ошибка распознавания речи: ${errorMessage}`;
+      // Если ошибка известная, но нет перевода
+      if (i18n.getTranslation('speech_recognition_error') !== 'speech_recognition_error') {
+        return i18n.getTranslation('speech_recognition_error') || 
+               'Ошибка распознавания речи';
+      }
+      
+      // Вывод более читаемой ошибки, если перевод недоступен
+      return 'Ошибка распознавания речи. Проверьте настройки или попробуйте позже.';
     } catch (e) {
       return i18n.getTranslation('unknown_error') || 'Неизвестная ошибка';
     }

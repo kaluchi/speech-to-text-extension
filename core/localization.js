@@ -349,6 +349,18 @@ class LocalizationCore {
       "recognition_language_info": {
         en: "Select the recognition language to improve accuracy.",
         ru: "Выберите язык распознавания для повышения точности."
+      },
+      "num_speakers_error": {
+        en: "Error in settings: number of speakers must be 1 or more",
+        ru: "Ошибка в настройках: количество говорящих должно быть 1 или больше"
+      },
+      "api_validation_error": {
+        en: "API validation error: please check the extension settings",
+        ru: "Ошибка валидации API: проверьте настройки расширения"
+      },
+      "speech_recognition_error": {
+        en: "Speech recognition error. Please check settings or try again later.",
+        ru: "Ошибка распознавания речи. Проверьте настройки или попробуйте позже."
       }
     };
 

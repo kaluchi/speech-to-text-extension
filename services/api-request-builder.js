@@ -51,8 +51,8 @@ class PageObjectApiRequestBuilderService {
       // Параметр: [значение из настроек, добавлять ли при undefined]
       'tag_audio_events': [apiSettings.tag_audio_events, false],
       'timestamps_granularity': [apiSettings.timestamps_granularity, true],
-      'diarize': [apiSettings.diarize, false],
-      'num_speakers': [apiSettings.num_speakers, true]
+      'diarize': [apiSettings.diarize, false]
+      // Удаляем num_speakers из общего списка для отдельной обработки
     };
     
     // Добавляем параметры запроса
@@ -60,6 +60,21 @@ class PageObjectApiRequestBuilderService {
       if (value !== undefined || addIfUndefined) {
         formData.append(param, value);
       }
+    }
+    
+    // Специальная обработка для num_speakers
+    if (apiSettings.num_speakers !== undefined && apiSettings.num_speakers !== '' && !isNaN(Number(apiSettings.num_speakers))) {
+      const numSpeakers = Number(apiSettings.num_speakers);
+      // Убедимся, что значение >= 1
+      if (numSpeakers >= 1) {
+        formData.append('num_speakers', numSpeakers);
+        logger.info(`Установлено количество говорящих: ${numSpeakers}`);
+      } else {
+        logger.warn(`Некорректное значение num_speakers: ${numSpeakers}, должно быть >= 1. Не добавляем в запрос.`);
+      }
+    } else {
+      // Значение не установлено, значит не добавляем этот параметр совсем
+      logger.info('Параметр num_speakers не установлен, используем автоопределение');
     }
     
     // Добавляем ключевые слова
@@ -99,7 +114,7 @@ class PageObjectApiRequestBuilderService {
       addSetting('tag_audio_events', 'tagAudioEvents', v => v === 'true');
       addSetting('timestamps_granularity', 'timestampsGranularity');
       addSetting('diarize', 'diarize', v => v === 'true');
-      addSetting('num_speakers', 'numSpeakers', v => Number(v));
+      addSetting('num_speakers', 'numSpeakers', v => v === '' ? '' : Number(v));
       
       // Ключевые слова
       const biasedKeywords = settings.getValue('biasedKeywords');
