@@ -81,9 +81,11 @@ class PageObjectChromeService {
    * @private
    */
   _setupMessageListeners() {
+    const { logger } = this._page;
+    
     chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-      if (this._page.logger) {
-        this._page.logger.debug('Получено сообщение в content script:', request);
+      if (logger) {
+        logger.debug('Получено сообщение в content script:', request);
       }
       
       const messageType = request.command || request.type || 'unknown';
@@ -99,8 +101,8 @@ class PageObjectChromeService {
           result
             .then(sendResponse)
             .catch((error) => {
-              if (this._page.logger) {
-                this._page.logger.error('Ошибка при обработке сообщения:', error);
+              if (logger) {
+                logger.error('Ошибка при обработке сообщения:', error);
               }
               sendResponse({ error: error.message });
             });

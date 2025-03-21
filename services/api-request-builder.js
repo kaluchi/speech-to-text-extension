@@ -20,8 +20,10 @@ class PageObjectApiRequestBuilderService {
    * @returns {Promise<{formData: FormData, apiKey: string, language: string}>} - FormData для запроса
    */
   async createElevenLabsRequestData(audioBlob) {
+    const { settings, logger } = this._page;
+    
     // Получаем API ключ из настроек
-    const apiKey = this._page.settings.getValue('apiKey');
+    const apiKey = settings.getValue('apiKey');
     
     if (!apiKey) {
       throw new Error('API ключ не найден в настройках');
@@ -31,53 +33,43 @@ class PageObjectApiRequestBuilderService {
     const language = this._determineLanguage();
     
     // Логируем начало создания запроса
-    this._page.logger.info(`Подготовка запроса для распознавания, формат: ${audioBlob.type}, размер: ${audioBlob.size} байт, язык: ${language}`);
+    logger.info(`Подготовка запроса для распознавания, формат: ${audioBlob.type}, размер: ${audioBlob.size} байт, язык: ${language}`);
     
     // Создаем FormData для отправки
     const formData = new FormData();
     
-    // Используем ключ 'file' для файла аудио
+    // Базовые параметры
     formData.append('file', audioBlob, 'speech.webm');
-    
-    // Используем актуальную модель
     formData.append('model_id', 'scribe_v1');
-    
-    // Получаем настройки из хранилища
-    const settings = await this._loadApiSettings();
-    
-    // Добавляем каждый параметр отдельно
-    
-    // Добавляем язык как language_code
     formData.append('language_code', language);
     
-    // Добавляем отметки аудио событий
-    if (settings.tag_audio_events !== undefined) {
-      formData.append('tag_audio_events', settings.tag_audio_events);
-    }
+    // Получаем настройки из хранилища
+    const apiSettings = await this._loadApiSettings();
     
-    // Добавляем детализацию меток времени
-    if (settings.timestamps_granularity) {
-      formData.append('timestamps_granularity', settings.timestamps_granularity);
-    }
+    // Настройки параметров и их значения
+    const params = {
+      // Параметр: [значение из настроек, добавлять ли при undefined]
+      'tag_audio_events': [apiSettings.tag_audio_events, false],
+      'timestamps_granularity': [apiSettings.timestamps_granularity, true],
+      'diarize': [apiSettings.diarize, false],
+      'num_speakers': [apiSettings.num_speakers, true]
+    };
     
-    // Добавляем диаризацию
-    if (settings.diarize !== undefined) {
-      formData.append('diarize', settings.diarize);
-    }
-    
-    // Добавляем количество говорящих
-    if (settings.num_speakers) {
-      formData.append('num_speakers', settings.num_speakers);
+    // Добавляем параметры запроса
+    for (const [param, [value, addIfUndefined]] of Object.entries(params)) {
+      if (value !== undefined || addIfUndefined) {
+        formData.append(param, value);
+      }
     }
     
     // Добавляем ключевые слова
-    if (settings.biased_keywords && Array.isArray(settings.biased_keywords) && settings.biased_keywords.length > 0) {
-      formData.append('biased_keywords', JSON.stringify(settings.biased_keywords));
+    if (apiSettings.biased_keywords?.length > 0) {
+      formData.append('biased_keywords', JSON.stringify(apiSettings.biased_keywords));
     }
     
     // Отладка: логируем содержимое formData
-    this._page.logger.info('Запрос к API сформирован с ключами:', [...formData.keys()]);
-    this._page.logger.info('Настройки API для модели scribe_v1:', settings);
+    logger.info('Запрос к API сформирован с ключами:', [...formData.keys()]);
+    logger.info('Настройки API для модели scribe_v1:', apiSettings);
     
     return { formData, apiKey, language };
   }
@@ -88,62 +80,51 @@ class PageObjectApiRequestBuilderService {
    * @private
    */
   async _loadApiSettings() {
+    const { settings, logger } = this._page;
+    
     try {
       // Собираем настройки API из отдельных ключей
-      const settings = {};
+      const apiSettings = {};
       
-      // Настройка отметок аудио событий
-      const tagAudioEvents = this._page.settings.getValue('tagAudioEvents');
-      if (tagAudioEvents !== null && tagAudioEvents !== undefined) {
-        settings.tag_audio_events = tagAudioEvents === 'true';
-        this._page.logger.info('Настройка отметок аудио событий:', tagAudioEvents, '->', settings.tag_audio_events);
-      }
+      // Функция для добавления настройки
+      const addSetting = (apiKey, settingKey, transform = (x) => x) => {
+        const value = settings.getValue(settingKey);
+        if (value !== null && value !== undefined) {
+          apiSettings[apiKey] = transform(value);
+          logger.info(`Настройка ${apiKey}:`, value, '->', apiSettings[apiKey]);
+        }
+      };
       
-      // Настройка детализации меток времени
-      const timestampsGranularity = this._page.settings.getValue('timestampsGranularity');
-      if (timestampsGranularity) {
-        settings.timestamps_granularity = timestampsGranularity;
-        this._page.logger.info('Настройка детализации меток времени:', timestampsGranularity);
-      }
-      
-      // Настройка диаризации
-      const diarize = this._page.settings.getValue('diarize');
-      if (diarize !== null && diarize !== undefined) {
-        settings.diarize = diarize === 'true';
-        this._page.logger.info('Настройка диаризации:', diarize, '->', settings.diarize);
-      }
-      
-      // Количество говорящих
-      const numSpeakers = this._page.settings.getValue('numSpeakers');
-      if (numSpeakers && !isNaN(Number(numSpeakers))) {
-        settings.num_speakers = Number(numSpeakers);
-        this._page.logger.info('Настройка количества говорящих:', numSpeakers, '->', settings.num_speakers);
-      }
+      // Добавляем все настройки
+      addSetting('tag_audio_events', 'tagAudioEvents', v => v === 'true');
+      addSetting('timestamps_granularity', 'timestampsGranularity');
+      addSetting('diarize', 'diarize', v => v === 'true');
+      addSetting('num_speakers', 'numSpeakers', v => Number(v));
       
       // Ключевые слова
-      const biasedKeywords = this._page.settings.getValue('biasedKeywords');
+      const biasedKeywords = settings.getValue('biasedKeywords');
       if (biasedKeywords && Array.isArray(biasedKeywords) && biasedKeywords.length > 0) {
-        settings.biased_keywords = biasedKeywords;
-        this._page.logger.info('Настройка ключевых слов:', biasedKeywords);
+        apiSettings.biased_keywords = biasedKeywords;
+        logger.info('Настройка ключевых слов:', biasedKeywords);
       }
       
       // Проверяем, есть ли дополнительные настройки в elevenlabsApiSettings
-      const apiSettings = this._page.settings.getValue('elevenlabsApiSettings');
-      if (apiSettings && typeof apiSettings === 'string') {
+      const extraSettings = settings.getValue('elevenlabsApiSettings');
+      if (extraSettings && typeof extraSettings === 'string') {
         try {
           // Объединяем с настройками из JSON
-          const extraSettings = JSON.parse(apiSettings);
-          Object.assign(settings, extraSettings);
-          this._page.logger.info('Дополнительные настройки API:', extraSettings);
+          const parsed = JSON.parse(extraSettings);
+          Object.assign(apiSettings, parsed);
+          logger.info('Дополнительные настройки API:', parsed);
         } catch (e) {
-          this._page.logger.warn('Ошибка при парсинге настроек API:', e);
+          logger.warn('Ошибка при парсинге настроек API:', e);
         }
       }
       
-      this._page.logger.info('Итоговые настройки API:', settings);
-      return settings;
+      logger.info('Итоговые настройки API:', apiSettings);
+      return apiSettings;
     } catch (error) {
-      this._page.logger.warn('Ошибка при загрузке настроек API:', error);
+      logger.warn('Ошибка при загрузке настроек API:', error);
       return {};
     }
   }
@@ -154,13 +135,15 @@ class PageObjectApiRequestBuilderService {
    * @private
    */
   _determineLanguage() {
+    const { settings, logger } = this._page;
+    
     try {
       // Проверяем настройку автоопределения
-      const autoDetect = this._page.settings.getValue('autoDetectLanguage');
+      const autoDetect = settings.getValue('autoDetectLanguage');
       
       if (autoDetect === 'false') {
         // Используем предпочитаемый язык из настроек
-        const preferred = this._page.settings.getValue('preferredLanguage');
+        const preferred = settings.getValue('preferredLanguage');
         if (preferred) {
           return preferred;
         }
@@ -183,7 +166,7 @@ class PageObjectApiRequestBuilderService {
       // По умолчанию русский
       return this._defaultLanguage;
     } catch (error) {
-      this._page.logger.warn('Ошибка при определении языка:', error);
+      logger.warn('Ошибка при определении языка:', error);
       return this._defaultLanguage;
     }
   }

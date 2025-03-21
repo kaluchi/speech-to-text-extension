@@ -23,11 +23,13 @@ class PageObjectI18nService {
    * Инициализация сервиса
    */
   async init() {
+    const { logger } = this._page;
+    
     try {
       await this.loadLanguageSetting();
-      this._page.logger.info(`Сервис локализации инициализирован (язык: ${this._core._currentLanguage})`);
+      logger.info(`Сервис локализации инициализирован (язык: ${this._core._currentLanguage})`);
     } catch (error) {
-      this._page.logger.error('Ошибка при инициализации сервиса локализации:', error);
+      logger.error('Ошибка при инициализации сервиса локализации:', error);
     }
   }
 
@@ -47,9 +49,11 @@ class PageObjectI18nService {
    * @returns {boolean} - Успешность установки
    */
   setLanguage(lang) {
+    const { logger } = this._page;
+    
     const result = this._core.setLanguage(lang);
     if (result) {
-      this._page.logger.info(`Язык изменен на: ${lang}`);
+      logger.info(`Язык изменен на: ${lang}`);
     }
     return result;
   }
@@ -60,12 +64,14 @@ class PageObjectI18nService {
    * @returns {Promise<string>} - Promise с текущим языком
    */
   async loadLanguageSetting(callback) {
+    const { logger } = this._page;
+    
     try {
       const language = await this._core.loadLanguageSetting(callback);
-      this._page.logger.debug(`Загружен язык из настроек: ${language}`);
+      logger.debug(`Загружен язык из настроек: ${language}`);
       return language;
     } catch (error) {
-      this._page.logger.error('Ошибка при загрузке настроек языка:', error);
+      logger.error('Ошибка при загрузке настроек языка:', error);
       if (callback) callback(this._core._currentLanguage);
       return this._core._currentLanguage;
     }

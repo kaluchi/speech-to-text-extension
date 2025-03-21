@@ -11,11 +11,13 @@ class PageObjectAudioAnalyzerService {
    * Инициализация сервиса
    */
   async init() {
+    const { logger } = this._page;
+    
     try {
       this._audioContext = new (window.AudioContext || window.webkitAudioContext)();
-      this._page.logger.debug('AudioContext создан');
+      logger.debug('AudioContext создан');
     } catch (error) {
-      this._page.logger.error('Ошибка при создании AudioContext:', error);
+      logger.error('Ошибка при создании AudioContext:', error);
     }
   }
 
@@ -26,9 +28,10 @@ class PageObjectAudioAnalyzerService {
    * @returns {Promise<boolean>} - true, если в аудио есть звук выше порога
    */
   async hasSound(audioBlob, threshold = 0.001) { // Установлен порог 0.001
+    const { logger } = this._page;
+    
     try {
-      // Убираем проверку на размер аудио - всегда анализируем содержимое
-      
+      // Инициализируем контекст если необходимо
       if (!this._audioContext) {
         await this.init();
       }
@@ -36,32 +39,51 @@ class PageObjectAudioAnalyzerService {
       const audioData = await this._loadAudioData(audioBlob);
       
       if (!audioData) {
-        console.warn('Не удалось загрузить аудиоданные для анализа');
-        return false; // В случае ошибки считаем, что звука нет
+        logger.warn('Не удалось загрузить аудиоданные для анализа');
+        return false;
       }
       
       try {
         const audioBuffer = await this._audioContext.decodeAudioData(audioData);
-        const channelData = audioBuffer.getChannelData(0); // Берем первый канал
+        const channelData = audioBuffer.getChannelData(0);
         
-        // Анализируем среднеквадратичное значение амплитуды
-        const rms = this._calculateRMS(channelData);
+        // Получаем статистику аудио
+        const { rms, peak } = this._calculateAudioStats(channelData);
         
-        // Анализируем пиковую амплитуду
-        const peak = this._calculatePeak(channelData);
+        logger.debug(`Анализ аудио: RMS = ${rms}, Peak = ${peak}, Порог = ${threshold}`);
         
-        console.log(`Анализ аудио: RMS = ${rms}, Peak = ${peak}, Порог = ${threshold}`);
-        
-        // Считаем звук присутствующим, если либо RMS, либо пиковая амплитуда выше порога
+        // Считаем звук присутствующим, если любой показатель выше порога
         return rms > threshold || peak > threshold * 5;
       } catch (decodeError) {
-        console.error('Ошибка при декодировании аудиоданных:', decodeError);
-        return false; // В случае ошибки декодирования считаем, что звука нет
+        logger.error('Ошибка при декодировании аудиоданных:', decodeError);
+        return false;
       }
     } catch (error) {
-      console.error('Ошибка при анализе аудио:', error);
-      return false; // В случае любой ошибки считаем, что звука нет
+      logger.error('Ошибка при анализе аудио:', error);
+      return false;
     }
+  }
+
+  /**
+   * Расчет статистики аудиоданных
+   * @param {Float32Array} channelData - Аудиоданные канала
+   * @returns {Object} - Объект со статистикой
+   * @private
+   */
+  _calculateAudioStats(channelData) {
+    let sum = 0;
+    let peak = 0;
+    
+    for (let i = 0; i < channelData.length; i++) {
+      const abs = Math.abs(channelData[i]);
+      sum += abs * abs;
+      if (abs > peak) peak = abs;
+    }
+    
+    return { 
+      rms: Math.sqrt(sum / channelData.length),
+      peak
+    };
   }
 
   /**
@@ -71,6 +93,8 @@ class PageObjectAudioAnalyzerService {
    * @returns {Promise<Array<number>>} - Массив значений амплитуды
    */
   async getAmplitudeEnvelope(audioBlob, segments = 50) {
+    const { logger } = this._page;
+    
     try {
       if (!this._audioContext) {
         await this.init();
@@ -79,7 +103,7 @@ class PageObjectAudioAnalyzerService {
       const audioData = await this._loadAudioData(audioBlob);
       
       if (!audioData) {
-        this._page.logger.warn('Не удалось загрузить аудиоданные для анализа огибающей');
+        logger.warn('Не удалось загрузить аудиоданные для анализа огибающей');
         return new Array(segments).fill(0);
       }
       
@@ -89,7 +113,7 @@ class PageObjectAudioAnalyzerService {
       // Вычисляем огибающую
       return this._calculateEnvelope(channelData, segments);
     } catch (error) {
-      this._page.logger.error('Ошибка при получении огибающей аудио:', error);
+      logger.error('Ошибка при получении огибающей аудио:', error);
       return new Array(segments).fill(0);
     }
   }
@@ -102,6 +126,8 @@ class PageObjectAudioAnalyzerService {
    * @returns {Promise<Array<{start: number, end: number}>>} - Массив пауз
    */
   async detectSilences(audioBlob, threshold = 0.01, minPauseDuration = 0.3) {
+    const { logger } = this._page;
+    
     try {
       if (!this._audioContext) {
         await this.init();
@@ -110,7 +136,7 @@ class PageObjectAudioAnalyzerService {
       const audioData = await this._loadAudioData(audioBlob);
       
       if (!audioData) {
-        this._page.logger.warn('Не удалось загрузить аудиоданные для анализа пауз');
+        logger.warn('Не удалось загрузить аудиоданные для анализа пауз');
         return [];
       }
       
@@ -123,7 +149,7 @@ class PageObjectAudioAnalyzerService {
       
       return this._findSilences(channelData, threshold, minPauseSamples, sampleRate);
     } catch (error) {
-      this._page.logger.error('Ошибка при определении пауз в аудио:', error);
+      logger.error('Ошибка при определении пауз в аудио:', error);
       return [];
     }
   }
@@ -135,53 +161,19 @@ class PageObjectAudioAnalyzerService {
    * @private
    */
   async _loadAudioData(audioBlob) {
+    const { logger } = this._page;
+    
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
       
       reader.onload = () => resolve(reader.result);
       reader.onerror = () => {
-        console.error('Ошибка при чтении аудиофайла:', reader.error);
+        logger.error('Ошибка при чтении аудиофайла:', reader.error);
         reject(reader.error);
       };
       
       reader.readAsArrayBuffer(audioBlob);
     });
-  }
-
-  /**
-   * Расчет среднеквадратичного значения (RMS) аудиоданных
-   * @param {Float32Array} channelData - Аудиоданные канала
-   * @returns {number} - RMS значение (от 0 до 1)
-   * @private
-   */
-  _calculateRMS(channelData) {
-    let sum = 0;
-    
-    for (let i = 0; i < channelData.length; i++) {
-      sum += channelData[i] * channelData[i];
-    }
-    
-    const rms = Math.sqrt(sum / channelData.length);
-    return rms;
-  }
-
-  /**
-   * Расчет пиковой амплитуды
-   * @param {Float32Array} channelData - Аудиоданные канала
-   * @returns {number} - Пиковое значение (от 0 до 1)
-   * @private
-   */
-  _calculatePeak(channelData) {
-    let peak = 0;
-    
-    for (let i = 0; i < channelData.length; i++) {
-      const abs = Math.abs(channelData[i]);
-      if (abs > peak) {
-        peak = abs;
-      }
-    }
-    
-    return peak;
   }
 
   /**

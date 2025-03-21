@@ -37,15 +37,17 @@ class PageObjectKeyboardService {
    * Инициализация сервиса
    */
   async init() {
-    this._page.logger.info(`Настройка обработчиков клавиши ${this._targetKey} для управления записью`);
+    const { logger, events, chrome } = this._page;
+    
+    logger.info(`Настройка обработчиков клавиши ${this._targetKey} для управления записью`);
     
     // Используем сервис events для установки обработчиков
-    this._page.events.onKeyDown(this._targetKey, this.handleKeyDown);
-    this._page.events.onKeyUp(this._targetKey, this.handleKeyUp);
+    events.onKeyDown(this._targetKey, this.handleKeyDown);
+    events.onKeyUp(this._targetKey, this.handleKeyUp);
     
     // Регистрация обработчика сообщений для проверки микрофона
-    this._page.chrome.onMessage('checkMicrophoneStatus', async () => {
-      this._page.logger.info("Получен запрос на проверку статуса микрофона");
+    chrome.onMessage('checkMicrophoneStatus', async () => {
+      logger.info("Получен запрос на проверку статуса микрофона");
       return await this._page.media.checkMicrophonePermission();
     });
     
@@ -67,11 +69,13 @@ class PageObjectKeyboardService {
    * Обработка нажатия не целевой клавиши
    */
   handleNonTargetKey(event) {
+    const { logger, recorder } = this._page;
+    
     if (event.key !== this._targetKey && this._state !== this._states.IDLE) {
-      this._page.logger.debug(`${event.type === 'keydown' ? 'Нажата' : 'Отпущена'} не целевая клавиша: ${event.key}, Сброс в Idle`);
+      logger.debug(`${event.type === 'keydown' ? 'Нажата' : 'Отпущена'} не целевая клавиша: ${event.key}, Сброс в Idle`);
       
       if (this._state === this._states.HELD) {
-        this._page.recorder.stopRecording();
+        recorder.stopRecording();
       }
       
       this.resetToIdle();
@@ -84,7 +88,9 @@ class PageObjectKeyboardService {
    * Обработка нажатия клавиши
    */
   handleKeyDown(event, currentTime) {
-    this._page.logger.debug(`Событие keydown: ${event.key}, текущее состояние: ${this._state}`);
+    const { logger, recorder } = this._page;
+    
+    logger.debug(`Событие keydown: ${event.key}, текущее состояние: ${this._state}`);
     
     if (this.handleNonTargetKey(event)) {
       return;
@@ -95,19 +101,19 @@ class PageObjectKeyboardService {
         this._state = this._states.PRESSED;
         this._currentKey = event.key;
         this._lastTime = currentTime;
-        this._page.logger.debug(`Нажатие: ${event.key} (Pressed)`);
+        logger.debug(`Нажатие: ${event.key} (Pressed)`);
         break;
         
       case this._states.RELEASED:
         if (currentTime - this._lastKeyUpTime <= this._doublePressThreshold) {
           this._state = this._states.HELD;
           this._lastTime = currentTime;
-          this._page.logger.info(`Нажатие: ${event.key} (Удержание - Обнаружено двойное нажатие)`);
-          this._page.recorder.startRecording();
+          logger.info(`Нажатие: ${event.key} (Удержание - Обнаружено двойное нажатие)`);
+          recorder.startRecording();
         } else {
           this._state = this._states.PRESSED;
           this._lastTime = currentTime;
-          this._page.logger.debug(`Нажатие: ${event.key} (Pressed - Слишком медленно)`);
+          logger.debug(`Нажатие: ${event.key} (Pressed - Слишком медленно)`);
         }
         break;
         
@@ -119,7 +125,9 @@ class PageObjectKeyboardService {
    * Обработка отпускания клавиши
    */
   handleKeyUp(event, keyUpTime) {
-    this._page.logger.debug(`Событие keyup: ${event.key}, текущее состояние: ${this._state}`);
+    const { logger, recorder } = this._page;
+    
+    logger.debug(`Событие keyup: ${event.key}, текущее состояние: ${this._state}`);
     
     if (this.handleNonTargetKey(event)) {
       return;
@@ -131,14 +139,14 @@ class PageObjectKeyboardService {
           this._state = this._states.RELEASED;
           this._lastKeyUpTime = keyUpTime;
           const duration = (keyUpTime - this._lastTime).toFixed(2);
-          this._page.logger.debug(`Отпускание: ${event.key}, Время удержания: ${duration}мс (Released)`);
+          logger.debug(`Отпускание: ${event.key}, Время удержания: ${duration}мс (Released)`);
           break;
           
         case this._states.HELD:
           this._state = this._states.IDLE;
           const heldDuration = (keyUpTime - this._lastTime).toFixed(2);
-          this._page.logger.info(`Отпускание: ${event.key}, Время удержания в Held: ${heldDuration}мс`);
-          this._page.recorder.stopRecording();
+          logger.info(`Отпускание: ${event.key}, Время удержания в Held: ${heldDuration}мс`);
+          recorder.stopRecording();
           this.resetToIdle();
           break;
       }

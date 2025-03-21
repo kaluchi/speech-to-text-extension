@@ -20,7 +20,8 @@ class PageObjectNotificationsService {
    * @param {number} [duration] - Длительность показа в мс
    */
   showInfo(message, duration = this._defaultDuration) {
-    this._page.ui.showNotification(message, 'info', duration);
+    const { ui } = this._page;
+    ui.showNotification(message, 'info', duration);
   }
 
   /**
@@ -29,7 +30,8 @@ class PageObjectNotificationsService {
    * @param {number} [duration] - Длительность показа в мс
    */
   showSuccess(message, duration = this._defaultDuration) {
-    this._page.ui.showNotification(message, 'success', duration);
+    const { ui } = this._page;
+    ui.showNotification(message, 'success', duration);
   }
 
   /**
@@ -38,7 +40,8 @@ class PageObjectNotificationsService {
    * @param {number} [duration] - Длительность показа в мс
    */
   showWarning(message, duration = this._defaultDuration) {
-    this._page.ui.showNotification(message, 'warning', duration);
+    const { ui } = this._page;
+    ui.showNotification(message, 'warning', duration);
   }
 
   /**
@@ -47,7 +50,8 @@ class PageObjectNotificationsService {
    * @param {number} [duration] - Длительность показа в мс
    */
   showError(message, duration = this._defaultDuration) {
-    this._page.ui.showNotification(message, 'error', duration);
+    const { ui } = this._page;
+    ui.showNotification(message, 'error', duration);
   }
 
   /**
@@ -57,10 +61,12 @@ class PageObjectNotificationsService {
    * @returns {Promise<Notification|null>} - Объект уведомления или null
    */
   async sendBrowserNotification(title, options = {}) {
+    const { logger } = this._page;
+    
     try {
       // Проверяем поддержку и разрешение на отправку уведомлений
       if (!('Notification' in window)) {
-        this._page.logger.warn('Браузерные уведомления не поддерживаются');
+        logger.warn('Браузерные уведомления не поддерживаются');
         return null;
       }
       
@@ -69,7 +75,7 @@ class PageObjectNotificationsService {
         const permission = await Notification.requestPermission();
         
         if (permission !== 'granted') {
-          this._page.logger.warn('Разрешение на отправку уведомлений не получено');
+          logger.warn('Разрешение на отправку уведомлений не получено');
           return null;
         }
       }
@@ -94,7 +100,7 @@ class PageObjectNotificationsService {
       
       return notification;
     } catch (error) {
-      this._page.logger.error('Ошибка при отправке браузерного уведомления:', error);
+      logger.error('Ошибка при отправке браузерного уведомления:', error);
       return null;
     }
   }

@@ -19,23 +19,25 @@ class PageObjectClipboardService {
    * @returns {Promise<boolean>} - true, если копирование прошло успешно
    */
   async write(text) {
+    const { logger, ui, i18n } = this._page;
+    
     try {
       if (!navigator.clipboard) {
         return this._legacyWrite(text);
       }
       
       await navigator.clipboard.writeText(text);
-      this._page.logger.info('Текст скопирован в буфер обмена');
+      logger.info('Текст скопирован в буфер обмена');
       
       // Показываем уведомление о копировании
-      if (this._page.ui) {
-        const message = this._page.i18n.getTranslation('copied_to_clipboard') || 'Текст скопирован в буфер обмена';
-        this._page.ui.showNotification(message, 'success');
+      if (ui) {
+        const message = i18n.getTranslation('copied_to_clipboard') || 'Текст скопирован в буфер обмена';
+        ui.showNotification(message, 'success');
       }
       
       return true;
     } catch (error) {
-      this._page.logger.error('Ошибка при копировании в буфер обмена:', error);
+      logger.error('Ошибка при копировании в буфер обмена:', error);
       
       // Пробуем запасной метод
       return this._legacyWrite(text);
@@ -47,17 +49,19 @@ class PageObjectClipboardService {
    * @returns {Promise<string>} - Текст из буфера обмена
    */
   async read() {
+    const { logger } = this._page;
+    
     try {
       if (!navigator.clipboard) {
         throw new Error('API буфера обмена не поддерживается');
       }
       
       const text = await navigator.clipboard.readText();
-      this._page.logger.info('Текст прочитан из буфера обмена');
+      logger.info('Текст прочитан из буфера обмена');
       
       return text;
     } catch (error) {
-      this._page.logger.error('Ошибка при чтении из буфера обмена:', error);
+      logger.error('Ошибка при чтении из буфера обмена:', error);
       throw error;
     }
   }
@@ -69,6 +73,8 @@ class PageObjectClipboardService {
    * @private
    */
   _legacyWrite(text) {
+    const { logger, ui, i18n } = this._page;
+    
     try {
       // Создаем временный элемент
       const textarea = document.createElement('textarea');
@@ -90,21 +96,21 @@ class PageObjectClipboardService {
       document.body.removeChild(textarea);
       
       if (successful) {
-        this._page.logger.info('Текст скопирован в буфер обмена (legacy)');
+        logger.info('Текст скопирован в буфер обмена (legacy)');
         
         // Показываем уведомление о копировании
-        if (this._page.ui) {
-          const message = this._page.i18n.getTranslation('copied_to_clipboard') || 'Текст скопирован в буфер обмена';
-          this._page.ui.showNotification(message, 'success');
+        if (ui) {
+          const message = i18n.getTranslation('copied_to_clipboard') || 'Текст скопирован в буфер обмена';
+          ui.showNotification(message, 'success');
         }
         
         return true;
       } else {
-        this._page.logger.warn('Не удалось скопировать текст в буфер обмена (legacy)');
+        logger.warn('Не удалось скопировать текст в буфер обмена (legacy)');
         return false;
       }
     } catch (error) {
-      this._page.logger.error('Ошибка при использовании запасного метода копирования:', error);
+      logger.error('Ошибка при использовании запасного метода копирования:', error);
       return false;
     }
   }
