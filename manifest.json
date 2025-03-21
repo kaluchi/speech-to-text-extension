@@ -31,8 +31,10 @@
         "services/text.js",
         "services/notifications.js",
         "services/audio-analyzer.js",
+        "services/api-request-builder.js",
         "services/speech-api.js",
-        "services/keyboard-controller.js",
+        "services/recorder.js",
+        "services/keyboard.js",
         "content.js"
       ]
     }
