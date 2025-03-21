@@ -41,7 +41,9 @@ class PageObject {
       await this._initializeService('text');
       await this._initializeService('notifications');
       await this._initializeService('audioAnalyzer');
+      await this._initializeService('apiRequestBuilder');
       await this._initializeService('speechApi');
+      await this._initializeService('recordingController');
       
       // Инициализируем контроллер клавиатуры последним, так как он зависит от многих других сервисов
       await this._initializeService('keyboardController');
