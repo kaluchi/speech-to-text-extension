@@ -138,9 +138,22 @@ class PageObjectChromeService {
 
   /**
    * Открыть страницу настроек расширения
+   * Безопасный метод, работающий и в контент-скрипте
    */
   openOptionsPage() {
-    chrome.runtime.openOptionsPage();
+    try {
+      // Пытаемся напрямую открыть страницу настроек
+      if (typeof chrome.runtime.openOptionsPage === 'function') {
+        chrome.runtime.openOptionsPage();
+      } else {
+        // Альтернативный способ - отправляем сообщение в background script
+        this.sendMessage({ command: 'openOptionsPage' });
+      }
+    } catch (error) {
+      // Если произошла ошибка, используем запасной вариант
+      console.warn('Ошибка при открытии страницы настроек:', error);
+      this.sendMessage({ command: 'openOptionsPage' });
+    }
   }
 }
 
