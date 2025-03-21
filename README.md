@@ -57,10 +57,12 @@ The extension uses the PageObject pattern to encapsulate interaction with DOM, b
 ```
 /
 ├── core/                        # Application core
-│   └── page-object.js           # Main PageObject class - service coordinator
+│   ├── page-object.js           # Main PageObject class - service coordinator
+│   └── localization.js          # Core localization module
 ├── services/                    # Services encapsulating functionality
 │   ├── logger.js                # Logging service
 │   ├── chrome.js                # Chrome API service
+│   ├── i18n.js                  # Internationalization service
 │   ├── settings.js              # Settings service
 │   ├── dom.js                   # DOM service
 │   ├── events.js                # Events service
@@ -76,7 +78,6 @@ The extension uses the PageObject pattern to encapsulate interaction with DOM, b
 ├── background.js                # Background script
 ├── popup.html/js                # Extension popup window
 ├── options.html/js              # Extension settings page
-├── localization.js              # Localization module
 └── manifest.json                # Extension manifest
 ```
 
@@ -113,6 +114,11 @@ window.page.ui.hideMask();
 // Working with settings
 const apiKey = await window.page.settings.getValue('apiKey');
 await window.page.settings.checkApiKey();
+
+// Localization
+const message = window.page.i18n.getTranslation('key_name');
+window.page.i18n.setLanguage('en');
+window.page.i18n.applyTranslations(document.querySelector('.my-element'));
 ```
 
 ## Extension Installation
