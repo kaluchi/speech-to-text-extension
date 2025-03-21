@@ -11,8 +11,11 @@ class PageObjectSpeechApiService {
    * Инициализация сервиса
    */
   async init() {
-    // Ничего не делаем при инициализации
-    await this._page._initializeService('apiRequestBuilder');
+    // Сервис apiRequestBuilder должен быть уже инициализирован в PageObject раньше speech-api
+    // Поэтому нам не нужно его инициализировать здесь
+    if (!this._page.apiRequestBuilder) {
+      throw new Error('Требуемый сервис apiRequestBuilder не инициализирован');
+    }
   }
 
   /**
@@ -21,12 +24,14 @@ class PageObjectSpeechApiService {
    * @returns {Promise<string>} - Распознанный текст
    */
   async sendToElevenLabsAPI(audioBlob) {
+    const { ui, apiRequestBuilder, logger, text } = this._page;
+    
     try {
       // Показываем индикатор обработки
-      this._page.ui.changeMaskColor('rgba(255, 165, 0, 0.15)');
+      ui.changeMaskColor('rgba(255, 165, 0, 0.15)');
       
       // Получаем данные для запроса
-      const { formData, apiKey, language } = await this._page.apiRequestBuilder.createElevenLabsRequestData(audioBlob);
+      const { formData, apiKey, language } = await apiRequestBuilder.createElevenLabsRequestData(audioBlob);
       
       // Отправляем запрос
       const response = await fetch(this._apiEndpoint, {
@@ -53,25 +58,25 @@ class PageObjectSpeechApiService {
       
       const recognizedText = result.text.trim();
       
-      this._page.logger.info('Текст успешно распознан:', recognizedText);
+      logger.info('Текст успешно распознан:', recognizedText);
       
       // Вставляем распознанный текст в активный элемент
-      await this._page.text.insertText(recognizedText);
+      await text.insertText(recognizedText);
       
       return recognizedText;
     } catch (error) {
-      this._page.logger.error('Ошибка при распознавании речи:', error);
+      logger.error('Ошибка при распознавании речи:', error);
       
       // Получаем сообщение об ошибке
       const errorMessage = this._getReadableErrorMessage(error);
       
       // Вставляем сообщение об ошибке в активное поле вместо показа уведомления
-      await this._page.text.insertText(errorMessage);
+      await text.insertText(errorMessage);
       
       throw error;
     } finally {
       // Скрываем маску, если она еще видима
-      this._page.ui.hideMask();
+      ui.hideMask();
     }
   }
 
@@ -82,49 +87,38 @@ class PageObjectSpeechApiService {
    * @private
    */
   _getReadableErrorMessage(error) {
+    const { i18n } = this._page;
+    
     try {
       if (!error) {
-        return this._page.i18n.getTranslation('unknown_error') || 'Неизвестная ошибка';
+        return i18n.getTranslation('unknown_error') || 'Неизвестная ошибка';
       }
       
       const errorMessage = error.message || error.toString();
       
-      // Обработка ошибки с отсутствием поля file
-      if (errorMessage.includes('"file"],"msg":"Field required"')) {
-        return 'Ошибка при отправке аудио: не удалось прикрепить файл';
+      // Таблица соответствий ошибок
+      const errorMap = {
+        '"file"],"msg":"Field required"': 'Ошибка при отправке аудио: не удалось прикрепить файл',
+        'invalid_model_id': 'Ошибка API: используется устаревшая модель распознавания. Пожалуйста, обновите расширение.',
+        'options': 'Ошибка API: некорректные параметры распознавания. Проверьте настройки.',
+        '401': i18n.getTranslation('invalid_api_key') || 'Неверный API ключ',
+        '429': i18n.getTranslation('api_rate_limit') || 'Превышен лимит запросов API',
+        '500': i18n.getTranslation('server_error') || 'Ошибка сервера распознавания',
+        'network': i18n.getTranslation('network_error') || 'Ошибка сети. Проверьте подключение к интернету',
+        'Failed to fetch': i18n.getTranslation('network_error') || 'Ошибка сети. Проверьте подключение к интернету'
+      };
+      
+      // Ищем соответствие в таблице
+      for (const [errorPattern, message] of Object.entries(errorMap)) {
+        if (errorMessage.includes(errorPattern)) {
+          return message;
+        }
       }
       
-      // Обработка ошибки с неверным ID модели
-      if (errorMessage.includes('invalid_model_id')) {
-        return 'Ошибка API: используется устаревшая модель распознавания. Пожалуйста, обновите расширение.';
-      }
-      
-      // Обработка ошибки с неверными опциями
-      if (errorMessage.includes('options')) {
-        return 'Ошибка API: некорректные параметры распознавания. Проверьте настройки.';
-      }
-      
-      // Обработка типичных ошибок API
-      if (errorMessage.includes('401')) {
-        return this._page.i18n.getTranslation('invalid_api_key') || 'Неверный API ключ';
-      }
-      
-      if (errorMessage.includes('429')) {
-        return this._page.i18n.getTranslation('api_rate_limit') || 'Превышен лимит запросов API';
-      }
-      
-      if (errorMessage.includes('500')) {
-        return this._page.i18n.getTranslation('server_error') || 'Ошибка сервера распознавания';
-      }
-      
-      if (errorMessage.includes('network') || errorMessage.includes('Failed to fetch')) {
-        return this._page.i18n.getTranslation('network_error') || 'Ошибка сети. Проверьте подключение к интернету';
-      }
-      
-      return this._page.i18n.getTranslation('speech_recognition_error', errorMessage) || 
+      return i18n.getTranslation('speech_recognition_error', errorMessage) || 
              `Ошибка распознавания речи: ${errorMessage}`;
     } catch (e) {
-      return this._page.i18n.getTranslation('unknown_error') || 'Неизвестная ошибка';
+      return i18n.getTranslation('unknown_error') || 'Неизвестная ошибка';
     }
   }
 }
