@@ -159,7 +159,7 @@ class PageObjectSettingsService {
     const apiKey = this.getValue('apiKey');
     
     if (!apiKey) {
-      logger.warn('API ключ не найден');
+      logger.info('API ключ не найден');
       
       // Открываем страницу настроек вместо показа уведомления
       chrome.openOptionsPage();
