@@ -269,7 +269,7 @@ class PageObjectKeyboardControllerService {
       
       if (!containsSound) {
         this._page.logger.info('Аудио не содержит речи, отменяем запрос к API');
-        await this._page.text.insertText(window.i18n?.getTranslation('speech_not_detected') || 'Речь не обнаружена');
+        await this._page.text.insertText(this._page.i18n.getTranslation('speech_not_detected') || 'Речь не обнаружена');
         return;
       }
       

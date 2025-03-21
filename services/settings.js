@@ -153,7 +153,7 @@ class PageObjectSettingsService {
       this._page.logger.warn('API ключ не найден');
       if (this._page.notifications) {
         this._page.notifications.showWarning(
-          window.i18n?.getTranslation('missing_api_key') || 
+          this._page.i18n.getTranslation('missing_api_key') || 
           'Отсутствует API ключ. Пожалуйста, добавьте его в настройках.'
         );
       }

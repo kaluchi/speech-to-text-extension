@@ -17,8 +17,10 @@
     {
       "matches": ["<all_urls>"],
       "js": [
+        "core/localization.js",
         "core/page-object.js",
         "services/logger.js",
+        "services/i18n.js",
         "services/chrome.js",
         "services/settings.js",
         "services/dom.js",

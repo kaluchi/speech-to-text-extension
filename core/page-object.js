@@ -30,6 +30,7 @@ class PageObject {
     try {
       // Порядок инициализации важен! Некоторые сервисы зависят от других
       await this._initializeService('logger');
+      await this._initializeService('i18n');
       await this._initializeService('chrome');
       await this._initializeService('settings');
       await this._initializeService('dom');

@@ -126,37 +126,37 @@ class PageObjectMediaService {
    */
   _getErrorMessageForMicrophone(error) {
     if (!error) {
-      return window.i18n?.getTranslation('unknown_error') || 'Неизвестная ошибка';
+      return this._page.i18n.getTranslation('unknown_error') || 'Неизвестная ошибка';
     }
     
     if (error.name) {
       switch (error.name) {
         case "NotAllowedError":
         case "PermissionDeniedError":
-          return window.i18n?.getTranslation('mic_access_denied') || 'Доступ к микрофону запрещен';
+          return this._page.i18n.getTranslation('mic_access_denied') || 'Доступ к микрофону запрещен';
           
         case "NotFoundError":
         case "DevicesNotFoundError":
-          return window.i18n?.getTranslation('mic_not_found') || 'Микрофон не найден';
+          return this._page.i18n.getTranslation('mic_not_found') || 'Микрофон не найден';
           
         case "NotReadableError":
         case "TrackStartError":
-          return window.i18n?.getTranslation('mic_in_use') || 'Микрофон используется другим приложением';
+          return this._page.i18n.getTranslation('mic_in_use') || 'Микрофон используется другим приложением';
           
         case "OverconstrainedError":
         case "ConstraintNotSatisfiedError":
-          return window.i18n?.getTranslation('technical_limitations') || 'Технические ограничения';
+          return this._page.i18n.getTranslation('technical_limitations') || 'Технические ограничения';
           
         case "TypeError":
-          return window.i18n?.getTranslation('incorrect_data_type') || 'Некорректный тип данных';
+          return this._page.i18n.getTranslation('incorrect_data_type') || 'Некорректный тип данных';
           
         default:
-          return window.i18n?.getTranslation('unknown_mic_error', error.name) || 
+          return this._page.i18n.getTranslation('unknown_mic_error', error.name) || 
                  `Неизвестная ошибка микрофона: ${error.name}`;
       }
     }
     
-    return error.message || window.i18n?.getTranslation('unknown_error') || 'Неизвестная ошибка';
+    return error.message || this._page.i18n.getTranslation('unknown_error') || 'Неизвестная ошибка';
   }
 
   /**

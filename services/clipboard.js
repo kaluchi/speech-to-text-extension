@@ -29,7 +29,7 @@ class PageObjectClipboardService {
       
       // Показываем уведомление о копировании
       if (this._page.ui) {
-        const message = window.i18n?.getTranslation('copied_to_clipboard') || 'Текст скопирован в буфер обмена';
+        const message = this._page.i18n.getTranslation('copied_to_clipboard') || 'Текст скопирован в буфер обмена';
         this._page.ui.showNotification(message, 'success');
       }
       
@@ -94,7 +94,7 @@ class PageObjectClipboardService {
         
         // Показываем уведомление о копировании
         if (this._page.ui) {
-          const message = window.i18n?.getTranslation('copied_to_clipboard') || 'Текст скопирован в буфер обмена';
+          const message = this._page.i18n.getTranslation('copied_to_clipboard') || 'Текст скопирован в буфер обмена';
           this._page.ui.showNotification(message, 'success');
         }
         

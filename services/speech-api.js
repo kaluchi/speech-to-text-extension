@@ -246,7 +246,7 @@ class PageObjectSpeechApiService {
   _getReadableErrorMessage(error) {
     try {
       if (!error) {
-        return window.i18n?.getTranslation('unknown_error') || 'Неизвестная ошибка';
+        return this._page.i18n.getTranslation('unknown_error') || 'Неизвестная ошибка';
       }
       
       const errorMessage = error.message || error.toString();
@@ -268,25 +268,25 @@ class PageObjectSpeechApiService {
       
       // Обработка типичных ошибок API
       if (errorMessage.includes('401')) {
-        return window.i18n?.getTranslation('invalid_api_key') || 'Неверный API ключ';
+        return this._page.i18n.getTranslation('invalid_api_key') || 'Неверный API ключ';
       }
       
       if (errorMessage.includes('429')) {
-        return window.i18n?.getTranslation('api_rate_limit') || 'Превышен лимит запросов API';
+        return this._page.i18n.getTranslation('api_rate_limit') || 'Превышен лимит запросов API';
       }
       
       if (errorMessage.includes('500')) {
-        return window.i18n?.getTranslation('server_error') || 'Ошибка сервера распознавания';
+        return this._page.i18n.getTranslation('server_error') || 'Ошибка сервера распознавания';
       }
       
       if (errorMessage.includes('network') || errorMessage.includes('Failed to fetch')) {
-        return window.i18n?.getTranslation('network_error') || 'Ошибка сети. Проверьте подключение к интернету';
+        return this._page.i18n.getTranslation('network_error') || 'Ошибка сети. Проверьте подключение к интернету';
       }
       
-      return window.i18n?.getTranslation('speech_recognition_error', errorMessage) || 
+      return this._page.i18n.getTranslation('speech_recognition_error', errorMessage) || 
              `Ошибка распознавания речи: ${errorMessage}`;
     } catch (e) {
-      return window.i18n?.getTranslation('unknown_error') || 'Неизвестная ошибка';
+      return this._page.i18n.getTranslation('unknown_error') || 'Неизвестная ошибка';
     }
   }
 }
