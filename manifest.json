@@ -17,25 +17,24 @@
     {
       "matches": ["<all_urls>"],
       "js": [
-        "localization.js",
-        "content-utils.js",
-        "content-settings.js",
-        "content-state.js",
-        "content-recorder-analysis.js",
-        "content-recorder.js", 
-        "content-speechapi.js",
-        "content-text.js",
-        "content-main.js"
-      ],
-      "_comment": "Порядок загрузки: 1) localization.js - базовая локализация, 2) content-utils.js - утилиты, 3) content-settings.js - настройки, 4) content-state.js - управление состоянием, 5) content-recorder-analysis.js - анализ аудио, 6) content-recorder.js - запись аудио, 7) content-speechapi.js - API распознавания, 8) content-text.js - работа с текстом, 9) content-main.js - основные обработчики событий",
-      "run_at": "document_end"
+        "core/page-object.js",
+        "services/logger.js",
+        "services/chrome.js",
+        "services/settings.js",
+        "services/dom.js",
+        "services/events.js",
+        "services/media.js",
+        "services/ui.js",
+        "services/clipboard.js",
+        "services/text.js",
+        "services/notifications.js",
+        "services/audio-analyzer.js",
+        "services/speech-api.js",
+        "services/keyboard-controller.js",
+        "content.js"
+      ]
     }
   ],
-  "icons": {
-    "16": "icon16.png",
-    "48": "icon48.png",
-    "128": "icon128.png"
-  },
   "action": {
     "default_popup": "popup.html",
     "default_icon": {
@@ -43,6 +42,11 @@
       "48": "icon48.png",
       "128": "icon128.png"
     }
+  },
+  "icons": {
+    "16": "icon16.png",
+    "48": "icon48.png",
+    "128": "icon128.png"
   },
   "options_page": "options.html"
 }
