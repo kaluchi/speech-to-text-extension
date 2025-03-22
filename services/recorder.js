@@ -174,11 +174,34 @@ class PageObjectRecorderService {
         return;
       }
       
-      // Отправка в API через соответствующий сервис
-      await speechApi.sendToElevenLabsAPI(audioBlob);
+      // Показываем индикатор обработки
+      ui.changeMaskColor('rgba(255, 165, 0, 0.15)');
+      ui.showMask();
+      
+      try {
+        // Отправка в API через соответствующий сервис
+        const response = await speechApi.sendToElevenLabsAPI(audioBlob);
+        
+        // Вставляем результат в активный элемент
+        await text.insertText(response.result);
+        
+        // Проверяем на ошибку авторизации и открываем настройки если нужно
+        if (!response.ok && response.result.includes('401')) {
+          // Проверка наличия API ключа
+          const apiKey = settings.getValue('apiKey');
+          if (!apiKey) {
+            // Открыть страницу настроек при проблемах с API ключом
+            this._page.chrome.openOptionsPage();
+          }
+        }
+      } finally {
+        // Скрываем маску после завершения обработки
+        ui.hideMask();
+      }
     } catch (error) {
-      const { logger } = this._page;
+      const { logger, ui } = this._page;
       logger.error("Ошибка при обработке аудио:", error);
+      ui.hideMask(); // Дополнительная проверка, чтобы маска точно была скрыта
     }
   }
 }

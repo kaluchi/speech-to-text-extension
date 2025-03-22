@@ -11,8 +11,6 @@ class PageObjectSpeechApiService {
    * Инициализация сервиса
    */
   async init() {
-    // Сервис apiRequestBuilder должен быть уже инициализирован в PageObject раньше speech-api
-    // Поэтому нам не нужно его инициализировать здесь
     if (!this._page.apiRequestBuilder) {
       throw new Error('Требуемый сервис apiRequestBuilder не инициализирован');
     }
@@ -20,20 +18,26 @@ class PageObjectSpeechApiService {
 
   /**
    * Отправка аудио в API ElevenLabs для распознавания
+   * @param {Blob} audioBlob - Аудиоданные для распознавания
+   * @returns {Promise<{result: string, ok: boolean}>} - Результат распознавания или ошибка
    */
   async sendToElevenLabsAPI(audioBlob) {
-    const { ui, text } = this._page;
-    
     try {
-      ui.changeMaskColor('rgba(255, 165, 0, 0.15)');
+      // Отправляем запрос к API
       const response = await this._sendRequest(audioBlob);
-      const resultText = await this._processResponse(response);
-      await text.insertText(resultText);
-      return resultText;
+      
+      // Обрабатываем результат запроса
+      if (response.ok) {
+        const result = await this._extractRecognizedText(await response.json());
+        return { result, ok: true };
+      } else {
+        const errorMessage = await this._handleApiError(response);
+        return { result: errorMessage, ok: false };
+      }
     } catch (error) {
-      return this._handleGeneralError(error);
-    } finally {
-      ui.hideMask();
+      // Обрабатываем любые ошибки
+      const errorMessage = this._formatErrorMessage(error);
+      return { result: errorMessage, ok: false };
     }
   }
 
@@ -56,22 +60,6 @@ class PageObjectSpeechApiService {
   }
 
   /**
-   * Обрабатывает ответ от API
-   * @private
-   */
-  async _processResponse(response) {
-    const { text } = this._page;
-    
-    if (response.ok) {
-      return this._extractRecognizedText(await response.json());
-    } else {
-      const errorMessage = await this.handleApiError(response);
-      await text.insertText(errorMessage);
-      return errorMessage;
-    }
-  }
-
-  /**
    * Извлекает распознанный текст из ответа API
    * @private
    */
@@ -88,29 +76,26 @@ class PageObjectSpeechApiService {
   }
 
   /**
-   * Обрабатывает общие ошибки
+   * Форматирует сообщение об ошибке
    * @private
    */
-  async _handleGeneralError(error) {
-    const { logger, text, i18n } = this._page;
+  _formatErrorMessage(error) {
+    const { logger, i18n } = this._page;
     
     logger.error('Ошибка при отправке аудио в API:', error);
-    const errorMessage = error.message || i18n.getTranslation('api_error_unknown');
-    await text.insertText(errorMessage);
-    return errorMessage;
+    return error.message || i18n.getTranslation('api_error_unknown');
   }
 
   /**
    * Обрабатывает ошибки API ElevenLabs
-   * @param {Response} response - Объект ответа от fetch
-   * @returns {Promise<string>} - Локализованное сообщение об ошибке
+   * @private
    */
-  async handleApiError(response) {
+  async _handleApiError(response) {
     try {
-      // Получаем данные об ошибке из ответаs
+      // Получаем данные об ошибке
       const errorData = await response.json();
       
-      // Логгирование ошибки с деталями для отладки
+      // Логгирование ошибки
       this._page.logger.info('ElevenLabs API error', { 
         status: response.status,
         statusText: response.statusText,
@@ -138,18 +123,6 @@ class PageObjectSpeechApiService {
       const localizedHttpError = this._page.i18n.getTranslation(errorKey);
       if (localizedHttpError !== errorKey) {
         return localizedHttpError;
-      }
-      
-      // Если до 401 статуса - открыть настройки
-      if (response.status === 401) {
-        // Проверка наличия API ключа
-        const apiKey = this._page.settings.getValue('apiKey');
-        if (!apiKey) {
-          return this._page.i18n.getTranslation('api_error_missing_key');
-        }
-        
-        // Открыть страницу настроек при проблемах с API ключом
-        this._page.chrome.openOptionsPage();
       }
       
       // Если ничего не подошло, возвращаем общее сообщение об ошибке
