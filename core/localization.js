@@ -18,6 +18,20 @@ class LocalizationCore {
         en: "Voice Input with ElevenLabs",
         ru: "Голосовой ввод с ElevenLabs"
       },
+      
+      // Generic API error messages
+      "api_error_network": {
+        en: "Network error. Please check your internet connection",
+        ru: "Ошибка сети. Пожалуйста, проверьте подключение к интернету"
+      },
+      "api_error_unknown": {
+        en: "Unknown API error. Please try again later",
+        ru: "Неизвестная ошибка API. Пожалуйста, попробуйте позже"
+      },
+      "api_error_missing_key": {
+        en: "API key is missing. Please add it in the extension settings",
+        ru: "API ключ отсутствует. Пожалуйста, добавьте его в настройках расширения"
+      },
       "extension_description": {
         en: "Double press Cmd/Ctrl to activate sound recording and convert to text with ElevenLabs API",
         ru: "Двойное нажатие Cmd/Ctrl активирует запись звука и преобразование в текст с ElevenLabs API"
@@ -361,6 +375,48 @@ class LocalizationCore {
       "speech_recognition_error": {
         en: "Speech recognition error. Please check settings or try again later.",
         ru: "Ошибка распознавания речи. Проверьте настройки или попробуйте позже."
+      },
+      
+      // API error status codes
+      "detected_unusual_activity": {
+        en: "Unusual activity detected. Free Tier usage disabled. If you are using a proxy/VPN you might need to purchase a Paid Plan to not trigger our abuse detectors. Free Tier only works if users do not abuse it, for example by creating multiple free accounts. If we notice that many people try to abuse it, we will need to reconsider Free Tier altogether. \nPlease play fair and purchase any Paid Subscription to continue.",
+        ru: "Обнаружена необычная активность. Бесплатный тариф отключен. Пожалуйста, рассмотрите возможность приобретения платного плана."
+      },
+      "invalid_api_key": {
+        en: "Invalid API key. Please check your API key in the settings.",
+        ru: "Неверный API ключ. Пожалуйста, проверьте ваш API ключ в настройках."
+      },
+      "unauthorized": {
+        en: "Unauthorized access. Please check your API key.",
+        ru: "Неавторизованный доступ. Пожалуйста, проверьте ваш API ключ."
+      },
+      "insufficient_credits": {
+        en: "Insufficient credits in your account. Please top up your balance.",
+        ru: "Недостаточно кредитов на вашем счете. Пожалуйста, пополните баланс."
+      },
+      "quota_exceeded": {
+        en: "API usage quota exceeded. Please check your subscription limits.",
+        ru: "Превышена квота использования API. Пожалуйста, проверьте лимиты вашей подписки."
+      },
+      "rate_limited": {
+        en: "Rate limit exceeded. Please slow down your requests.",
+        ru: "Превышен лимит запросов. Пожалуйста, сократите частоту запросов."
+      },
+      "bad_request": {
+        en: "Bad request format. Please check your input parameters.",
+        ru: "Неверный формат запроса. Пожалуйста, проверьте параметры ввода."
+      },
+      "api_error_missing_key": {
+        en: "API key is missing. Please add it in the extension settings",
+        ru: "API ключ отсутствует. Пожалуйста, добавьте его в настройках расширения"
+      },
+      "api_error_network": {
+        en: "Network error. Please check your internet connection",
+        ru: "Ошибка сети. Пожалуйста, проверьте подключение к интернету"
+      },
+      "api_error_unknown": {
+        en: "Unknown API error. Please try again later",
+        ru: "Неизвестная ошибка API. Пожалуйста, попробуйте позже"
       }
     };
 
