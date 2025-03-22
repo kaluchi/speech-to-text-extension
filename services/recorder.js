@@ -167,9 +167,6 @@ class PageObjectRecorderService {
         return;
       }
       
-      // Показываем индикатор обработки
-      ui.changeMaskColor('rgba(255, 165, 0, 0.15)');
-      
       // Отладочное воспроизведение
       if (settings.getValue('debugAudio')) {
         logger.info('Отладка звука включена, воспроизводим запись');
@@ -191,7 +188,6 @@ class PageObjectRecorderService {
       await text.insertText(response.result);
     
     } catch (error) {
-      const { logger, ui } = this._page;
       logger.error("Ошибка при обработке аудио:", error);
     } finally {
       // Скрываем маску после завершения обработки
