@@ -132,10 +132,7 @@ class PageObjectRecorderService {
       return;
     }
     
-    // Добавляем небольшую задержку перед остановкой, чтобы гарантировать сбор данных
-    setTimeout(() => {
-      media.stopRecording();
-    }, 100); // Добавляем 100мс задержки
+    media.stopRecording();
   }
   
   /**
@@ -172,7 +169,6 @@ class PageObjectRecorderService {
       
       // Показываем индикатор обработки
       ui.changeMaskColor('rgba(255, 165, 0, 0.15)');
-      ui.showMask();
       
       // Отладочное воспроизведение
       if (settings.getValue('debugAudio')) {
@@ -180,39 +176,25 @@ class PageObjectRecorderService {
         ui.showAudioPlayer(audioBlob);
       }
       
-      try {
-        // Проверка наличия звука через сервис анализа аудио
-        const containsSound = await audioAnalyzer.hasSound(audioBlob);
-        
-        if (!containsSound) {
-          logger.info('Аудио не содержит речи, отменяем запрос к API');
-          await text.insertText(i18n.getTranslation('speech_not_detected') || 'Речь не обнаружена');
-          return;
-        }
-        
-        // Отправка в API через соответствующий сервис
-        const response = await speechApi.sendToElevenLabsAPI(audioBlob);
-        
-        // Вставляем результат в активный элемент
-        await text.insertText(response.result);
-        
-        // Проверяем на ошибку авторизации и открываем настройки если нужно
-        if (!response.ok && response.result.includes('401')) {
-          // Проверка наличия API ключа
-          const apiKey = settings.getValue('apiKey');
-          if (!apiKey) {
-            // Открыть страницу настроек при проблемах с API ключом
-            this._page.chrome.openOptionsPage();
-          }
-        }
-      } catch (error) {
-        logger.error('Ошибка при обработке аудио:', error);
-        await text.insertText(i18n.getTranslation('audio_processing_error') || 'Ошибка обработки аудио');
-      } finally {
-        ui.hideMask(); // Скрываем маску после завершения обработки
+      // Проверка наличия звука через сервис анализа аудио
+      const containsSound = await audioAnalyzer.hasSound(audioBlob);
+      
+      if (!containsSound) {
+        logger.info('Аудио не содержит речи, отменяем запрос к API');
+        await text.insertText(i18n.getTranslation('speech_not_detected') || 'Речь не обнаружена');
+        return;
       }
+      
+      // Отправка в API через соответствующий сервис
+      const response = await speechApi.sendToElevenLabsAPI(audioBlob);
+      // Вставляем результат в активный элемент
+      await text.insertText(response.result);
+    
     } catch (error) {
-      logger.error('Ошибка в процессе обработки речи:', error);
+      const { logger, ui } = this._page;
+      logger.error("Ошибка при обработке аудио:", error);
+    } finally {
+      // Скрываем маску после завершения обработки
       ui.hideMask();
     }
   }
