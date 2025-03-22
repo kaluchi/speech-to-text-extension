@@ -272,7 +272,7 @@ class PageObjectMediaService {
     const { logger } = this._page;
     
     if (this._chunks.length === 0) {
-      logger.warn("Нет записанных данных");
+      logger.info("Нет записанных данных");
       return null;
     }
     
@@ -280,7 +280,7 @@ class PageObjectMediaService {
     const validChunks = this._chunks.filter(chunk => chunk.size > 0);
     
     if (validChunks.length === 0) {
-      logger.warn("Все записанные части пусты");
+      logger.info("Все записанные части пусты");
       return null;
     }
     

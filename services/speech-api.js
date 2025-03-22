@@ -66,10 +66,6 @@ class PageObjectSpeechApiService {
   _extractRecognizedText(result) {
     const { logger } = this._page;
     
-    if (!result || !result.text) {
-      throw new Error('Пустой результат распознавания');
-    }
-    
     const recognizedText = result.text.trim();
     logger.info('Текст успешно распознан:', recognizedText);
     return recognizedText;

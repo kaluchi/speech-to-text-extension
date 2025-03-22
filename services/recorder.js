@@ -78,17 +78,14 @@ class PageObjectRecorderService {
         
         media.onRecordingStop(() => {
           const audioBlob = media.getRecordedBlob();
-          
+          media.stopAudioTracks();
+            
           if (!audioBlob) {
             logger.info("Не удалось получить аудио для обработки");
-            media.stopAudioTracks();
-            return;
+          } else {
+            logger.info(`Запись остановлена. Размер аудио: ${audioBlob.size} байт, Формат: ${audioBlob.type}`);
+            this.processRecording(audioBlob);
           }
-          
-          logger.info(`Запись остановлена. Размер аудио: ${audioBlob.size} байт, Формат: ${audioBlob.type}`);
-          
-          media.stopAudioTracks();
-          this.processRecording(audioBlob);
         });
         
         logger.info("Запускаем запись...");
