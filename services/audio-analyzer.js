@@ -39,7 +39,7 @@ class PageObjectAudioAnalyzerService {
       const audioData = await this._loadAudioData(audioBlob);
       
       if (!audioData) {
-        logger.warn('Не удалось загрузить аудиоданные для анализа');
+        logger.info('Не удалось загрузить аудиоданные для анализа');
         return false;
       }
       
@@ -55,11 +55,11 @@ class PageObjectAudioAnalyzerService {
         // Считаем звук присутствующим, если любой показатель выше порога
         return rms > threshold || peak > threshold * 5;
       } catch (decodeError) {
-        logger.error('Ошибка при декодировании аудиоданных:', decodeError);
+        logger.info('Ошибка при декодировании аудиоданных:', decodeError);
         return false;
       }
     } catch (error) {
-      logger.error('Ошибка при анализе аудио:', error);
+      logger.info('Ошибка при анализе аудио:', error);
       return false;
     }
   }
