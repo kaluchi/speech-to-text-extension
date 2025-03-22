@@ -122,50 +122,7 @@ class PageObjectEventsService {
     return this.addWindowListener('blur', handler);
   }
 
-  /**
-   * Обработчик получения фокуса окном
-   * @param {Function} handler - Обработчик
-   * @returns {Function} - Функция для удаления обработчика
-   */
-  onWindowFocus(handler) {
-    return this.addWindowListener('focus', handler);
-  }
 
-  /**
-   * Создает и отправляет пользовательское событие
-   * @param {string} eventName - Имя события
-   * @param {Object} detail - Данные события
-   * @param {boolean} bubbles - Флаг всплытия
-   * @param {boolean} cancelable - Флаг отменяемости
-   * @returns {CustomEvent} - Созданное событие
-   */
-  dispatchCustomEvent(eventName, detail = {}, bubbles = true, cancelable = true) {
-    const { dom } = this._page;
-    return dom.dispatchCustomEvent(eventName, detail, bubbles, cancelable);
-  }
-
-  /**
-   * Очищает все обработчики событий
-   */
-  clearAllListeners() {
-    const { dom } = this._page;
-    
-    // Очистка document listeners
-    this._documentListeners.forEach((handlers, eventType) => {
-      handlers.forEach(handler => {
-        dom.removeDocumentEventListener(eventType, handler);
-      });
-    });
-    this._documentListeners.clear();
-    
-    // Очистка window listeners
-    this._windowListeners.forEach((handlers, eventType) => {
-      handlers.forEach(handler => {
-        window.removeEventListener(eventType, handler);
-      });
-    });
-    this._windowListeners.clear();
-  }
 }
 
 // Экспортируем класс в глобальную область видимости

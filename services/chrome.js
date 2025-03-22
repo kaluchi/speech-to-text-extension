@@ -38,34 +38,7 @@ class PageObjectChromeService {
     });
   }
 
-  /**
-   * Удалить данные из хранилища
-   * @param {string|Array} keys - Ключи для удаления
-   * @param {string} storageArea - Область хранения ('sync', 'local', 'managed')
-   * @returns {Promise<void>} - Promise, который разрешается после удаления
-   */
-  async remove(keys, storageArea = 'sync') {
-    return new Promise((resolve) => {
-      chrome.storage[storageArea].remove(keys, resolve);
-    });
-  }
 
-  /**
-   * Отправить сообщение другому скрипту расширения
-   * @param {Object} message - Сообщение для отправки
-   * @returns {Promise<any>} - Promise с ответом на сообщение
-   */
-  async sendMessage(message) {
-    return new Promise((resolve, reject) => {
-      chrome.runtime.sendMessage(message, (response) => {
-        if (chrome.runtime.lastError) {
-          reject(new Error(chrome.runtime.lastError.message));
-        } else {
-          resolve(response);
-        }
-      });
-    });
-  }
 
   /**
    * Добавить обработчик сообщений
@@ -116,25 +89,7 @@ class PageObjectChromeService {
     });
   }
 
-  /**
-   * Получить текущую активную вкладку
-   * @returns {Promise<Object>} - Promise с объектом вкладки
-   */
-  async getCurrentTab() {
-    return new Promise((resolve) => {
-      chrome.tabs.query({ active: true, currentWindow: true }, ([tab]) => {
-        resolve(tab);
-      });
-    });
-  }
 
-  /**
-   * Получить манифест расширения
-   * @returns {Object} - Манифест расширения
-   */
-  getManifest() {
-    return chrome.runtime.getManifest();
-  }
 
   /**
    * Открыть страницу настроек расширения

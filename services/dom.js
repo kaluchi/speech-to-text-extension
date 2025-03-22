@@ -168,24 +168,6 @@ class PageObjectDomService {
     element.removeEventListener(eventType, handler, options);
   }
 
-  /**
-   * Создает и отправляет пользовательское событие в document
-   * @param {string} eventName - Имя события
-   * @param {Object} detail - Данные события
-   * @param {boolean} bubbles - Флаг всплытия
-   * @param {boolean} cancelable - Флаг отменяемости
-   * @returns {CustomEvent} - Созданное событие
-   */
-  dispatchCustomEvent(eventName, detail = {}, bubbles = true, cancelable = true) {
-    const event = new CustomEvent(eventName, {
-      detail,
-      bubbles,
-      cancelable
-    });
-    
-    document.dispatchEvent(event);
-    return event;
-  }
 
   /**
    * Генерирует DOM событие и отправляет его на элемент
@@ -201,73 +183,7 @@ class PageObjectDomService {
     return event;
   }
 
-  /**
-   * Проверяет, содержится ли элемент в документе
-   * @param {HTMLElement} element - Проверяемый элемент
-   * @returns {boolean} - true, если элемент в документе
-   */
-  isElementInDocument(element) {
-    return document.contains(element);
-  }
 
-  /**
-   * Находит элемент по селектору
-   * @param {string} selector - CSS селектор
-   * @returns {HTMLElement} - Найденный элемент или null
-   */
-  querySelector(selector) {
-    return document.querySelector(selector);
-  }
-
-  /**
-   * Находит все элементы по селектору
-   * @param {string} selector - CSS селектор
-   * @returns {NodeList} - Список найденных элементов
-   */
-  querySelectorAll(selector) {
-    return document.querySelectorAll(selector);
-  }
-
-  /**
-   * Находит элемент по ID
-   * @param {string} id - Идентификатор элемента
-   * @returns {HTMLElement} - Найденный элемент или null
-   */
-  getElementById(id) {
-    return document.getElementById(id);
-  }
-
-  /**
-   * Получает текущий URL документа
-   * @returns {string} - URL документа
-   */
-  getDocumentUrl() {
-    return document.URL;
-  }
-
-  /**
-   * Получает заголовок документа
-   * @returns {string} - Заголовок документа
-   */
-  getDocumentTitle() {
-    return document.title;
-  }
-
-  /**
-   * Получает тип кодировки документа
-   * @returns {string} - Тип кодировки
-   */
-  getDocumentCharset() {
-    return document.characterSet;
-  }
-
-  /**
-   * Проверяет, полностью ли загружен документ
-   * @returns {boolean} - true, если документ загружен
-   */
-  isDocumentReady() {
-    return document.readyState === 'complete';
-  }
 }
 
 // Экспортируем класс в глобальную область видимости

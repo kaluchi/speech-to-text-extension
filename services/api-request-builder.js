@@ -69,10 +69,11 @@ class PageObjectApiRequestBuilderService {
     // Создаем пустой объект apiSettings для настроек
     const apiSettings = {};
     
-    // Функция для добавления настройки только при наличии значения
+    // Функция для добавления настройки
     const addSetting = (apiKey, value, transform = (x) => x) => {
-      if (value !== null && value !== undefined) {
-        const transformedValue = transform(value);
+      const transformedValue = transform(value);
+      // Добавляем только если transformedValue не null
+      if (transformedValue !== null) {
         apiSettings[apiKey] = transformedValue;
         logger.info(`Настройка ${apiKey}:`, value, '->', transformedValue);
       }
@@ -92,9 +93,12 @@ class PageObjectApiRequestBuilderService {
     addSettingFromSettings('tag_audio_events', 'tagAudioEvents', v => v === 'true');
     addSettingFromSettings('timestamps_granularity', 'timestampsGranularity');
     addSettingFromSettings('diarize', 'diarize', v => v === 'true');
-    addSettingFromSettings('num_speakers', 'numSpeakers', v => Number(v));
+    addSettingFromSettings('num_speakers', 'numSpeakers', v => parseInt(v) || 1);
+    // Добавляем ключевые слова, автоматически преобразуя их в формат 'word:5'
     addSettingFromSettings('biased_keywords', 'biasedKeywords', keywords => 
-      Array.isArray(keywords) && keywords.length > 0 ? JSON.stringify(keywords) : null
+      Array.isArray(keywords) && keywords.length 
+        ? JSON.stringify(keywords.map(k => k.includes(':') ? k : `${k}:5`)) 
+        : null
     );
     
     // 4. Логируем итоговые настройки для отладки

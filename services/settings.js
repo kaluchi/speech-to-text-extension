@@ -133,22 +133,7 @@ class PageObjectSettingsService {
     }
   }
 
-  /**
-   * Сброс настроек до значений по умолчанию
-   * @returns {Promise<boolean>} - Успешность сброса
-   */
-  async resetToDefaults() {
-    const { logger } = this._page;
-    
-    try {
-      await this.saveAll(this._defaultSettings);
-      logger.info('Настройки сброшены до значений по умолчанию');
-      return true;
-    } catch (error) {
-      logger.error('Ошибка при сбросе настроек:', error);
-      return false;
-    }
-  }
+
 
   /**
    * Проверка API ключа
@@ -170,29 +155,7 @@ class PageObjectSettingsService {
     return true;
   }
 
-  /**
-   * Подписка на изменение настройки
-   * @param {string} key - Ключ настройки
-   * @param {Function} handler - Обработчик изменения (newValue, oldValue) => {}
-   * @returns {Function} - Функция для отмены подписки
-   */
-  onChange(key, handler) {
-    if (!this._changeHandlers.has(key)) {
-      this._changeHandlers.set(key, new Set());
-    }
-    
-    this._changeHandlers.get(key).add(handler);
-    
-    return () => {
-      if (this._changeHandlers.has(key)) {
-        this._changeHandlers.get(key).delete(handler);
-        
-        if (this._changeHandlers.get(key).size === 0) {
-          this._changeHandlers.delete(key);
-        }
-      }
-    };
-  }
+
 
   /**
    * Настройка слушателя изменений хранилища
