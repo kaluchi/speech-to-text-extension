@@ -90,15 +90,19 @@ class PageObjectApiRequestBuilderService {
     addSettingFromSettings('language_code', 'languageCode');
     
     // 2. Добавляем настройки из пользовательских настроек
-    addSettingFromSettings('tag_audio_events', 'tagAudioEvents', v => v === 'true');
-    addSettingFromSettings('timestamps_granularity', 'timestampsGranularity');
-    addSettingFromSettings('diarize', 'diarize', v => v === 'true');
-    addSettingFromSettings('num_speakers', 'numSpeakers', v => parseInt(v) || 1);
-    // Добавляем ключевые слова, автоматически преобразуя их в формат 'word:5'
+    addSettingFromSettings('tag_audio_events', 'tagAudioEvents'); // Значение уже boolean
+    
+    // Проверяем значение granularity - не отправляем, если 'none'
+    addSettingFromSettings('timestamps_granularity', 'timestampsGranularity', v => v === 'none' ? null : v);
+    
+    addSettingFromSettings('diarize', 'diarize'); // Значение уже boolean
+    
+    // Используем числовое значение numSpeakers как есть
+    addSettingFromSettings('num_speakers', 'numSpeakers');
+    
+    // Добавляем ключевые слова
     addSettingFromSettings('biased_keywords', 'biasedKeywords', keywords => 
-      Array.isArray(keywords) && keywords.length 
-        ? JSON.stringify(keywords.map(k => k.includes(':') ? k : `${k}:5`)) 
-        : null
+      Array.isArray(keywords) && keywords.length ? keywords : null
     );
     
     // 4. Логируем итоговые настройки для отладки

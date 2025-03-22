@@ -12,14 +12,14 @@ class PageObjectSettingsService {
       autoDetectLanguage: true,
       debugAudio: false,
       logLevel: 'info',
-      // Добавляем API-настройки из options.html
+      // API-настройки с нативными типами данных
       languageCode: 'ru',
-      tagAudioEvents: 'false',
+      tagAudioEvents: false,  // Булево вместо строки
       timestampsGranularity: 'word',
-      diarize: 'false',
-      numSpeakers: '1', // Корректное значение по умолчанию
+      diarize: false,         // Булево вместо строки
+      numSpeakers: 1,         // Число вместо строки
       biasedKeywords: [],
-      showRecordingMask: 'true'
+      enableRecordingMask: true  // Булево вместо строки
     };
     this._changeHandlers = new Map();
   }

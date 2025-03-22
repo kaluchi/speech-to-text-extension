@@ -3,14 +3,14 @@ const DEFAULT_SETTINGS = {
   apiKey: '',
   interfaceLanguage: '', // Default to browser language
   languageCode: 'ru',
-  tagAudioEvents: 'false',
+  tagAudioEvents: false,  // Булево вместо строки
   timestampsGranularity: 'word',
-  diarize: 'false',
-  numSpeakers: '1',
+  diarize: false,         // Булево вместо строки
+  numSpeakers: 1,          // Число вместо строки
   biasedKeywords: [],
-  debugAudio: 'false',
+  debugAudio: false,      // Булево вместо строки
   preferredMicrophoneId: '',
-  showRecordingMask: 'true'
+  enableRecordingMask: true  // Булево вместо строки
 };
 
 // DOM elements
@@ -22,7 +22,7 @@ const timestampsGranularitySelect = document.getElementById('timestamps-granular
 const diarizeSelect = document.getElementById('diarize');
 const numSpeakersInput = document.getElementById('num-speakers');
 const debugAudioSelect = document.getElementById('debug-audio');
-const showRecordingMaskSelect = document.getElementById('show-recording-mask');
+const enableRecordingMaskSelect = document.getElementById('enable-recording-mask');
 const keywordsContainer = document.getElementById('keywords-container');
 const addKeywordButton = document.getElementById('add-keyword');
 const resetButton = document.getElementById('reset-btn');
@@ -159,7 +159,7 @@ async function loadSettings() {
         biasedKeywords: items.biasedKeywords || DEFAULT_SETTINGS.biasedKeywords,
         debugAudio: items.debugAudio || DEFAULT_SETTINGS.debugAudio,
         preferredMicrophoneId: items.preferredMicrophoneId || DEFAULT_SETTINGS.preferredMicrophoneId,
-        showRecordingMask: items.showRecordingMask || DEFAULT_SETTINGS.showRecordingMask
+        enableRecordingMask: items.enableRecordingMask || DEFAULT_SETTINGS.enableRecordingMask
       };
       
       // Fill form fields
@@ -179,7 +179,7 @@ async function loadSettings() {
       diarizeSelect.value = currentSettings.diarize;
       numSpeakersInput.value = currentSettings.numSpeakers;
       debugAudioSelect.value = currentSettings.debugAudio;
-      showRecordingMaskSelect.value = currentSettings.showRecordingMask;
+      enableRecordingMaskSelect.value = currentSettings.enableRecordingMask;
 
       // Clear and fill keywords container
       keywordsContainer.innerHTML = '';
@@ -244,16 +244,23 @@ function saveSettings() {
   const apiKey = apiKeyInput.value.trim();
   const interfaceLanguage = interfaceLanguageSelect.value;
   const languageCode = languageCodeSelect.value;
-  const tagAudioEvents = tagAudioEventsSelect.value;
+  
+  // Преобразование строковых значений 'в нативные типы данных
+  const tagAudioEvents = tagAudioEventsSelect.value === 'true';
   const timestampsGranularity = timestampsGranularitySelect.value;
-  const diarize = diarizeSelect.value;
-  const numSpeakers = numSpeakersInput.value;
-  const debugAudio = debugAudioSelect.value;
+  const diarize = diarizeSelect.value === 'true';
+  
+  // Парсим и валидируем нумерованные значения
+  let numSpeakers = parseInt(numSpeakersInput.value, 10);
+  if (isNaN(numSpeakers) || numSpeakers < 1) numSpeakers = 1;
+  if (numSpeakers > 32) numSpeakers = 32;
+  
+  const debugAudio = debugAudioSelect.value === 'true';
   const preferredMicrophoneId = preferredMicrophoneSelect.value;
-  const showRecordingMask = showRecordingMaskSelect.value;
+  const enableRecordingMask = enableRecordingMaskSelect.value === 'true';
   const biasedKeywords = collectKeywords();
   
-  // Update current settings
+  // Update current settings with proper types
   currentSettings = {
     apiKey,
     interfaceLanguage,
@@ -265,7 +272,7 @@ function saveSettings() {
     biasedKeywords,
     debugAudio,
     preferredMicrophoneId,
-    showRecordingMask
+    enableRecordingMask
   };
   
   chrome.storage.sync.set(currentSettings, () => {
@@ -293,7 +300,7 @@ function resetSettings() {
   numSpeakersInput.value = DEFAULT_SETTINGS.numSpeakers;
   debugAudioSelect.value = DEFAULT_SETTINGS.debugAudio;
   preferredMicrophoneSelect.value = DEFAULT_SETTINGS.preferredMicrophoneId;
-  showRecordingMaskSelect.value = DEFAULT_SETTINGS.showRecordingMask;
+  enableRecordingMaskSelect.value = DEFAULT_SETTINGS.enableRecordingMask;
   
   // Clear keywords
   keywordsContainer.innerHTML = '';
@@ -344,7 +351,7 @@ function areSettingsDifferent() {
     currentSettings.biasedKeywords.length !== DEFAULT_SETTINGS.biasedKeywords.length ||
     currentSettings.biasedKeywords.some((item, index) => item !== DEFAULT_SETTINGS.biasedKeywords[index]) ||
     currentSettings.preferredMicrophoneId !== DEFAULT_SETTINGS.preferredMicrophoneId ||
-    currentSettings.showRecordingMask !== DEFAULT_SETTINGS.showRecordingMask
+    currentSettings.enableRecordingMask !== DEFAULT_SETTINGS.enableRecordingMask
   );
 }
 
@@ -403,7 +410,7 @@ function setupAutoSave() {
   numSpeakersInput.addEventListener('change', saveSettings);
   debugAudioSelect.addEventListener('change', saveSettings);
   preferredMicrophoneSelect.addEventListener('change', saveSettings);
-  showRecordingMaskSelect.addEventListener('change', saveSettings);
+  enableRecordingMaskSelect.addEventListener('change', saveSettings);
 }
 
 // Function to update dynamic translations

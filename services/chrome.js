@@ -38,7 +38,26 @@ class PageObjectChromeService {
     });
   }
 
-
+  /**
+   * Отправить сообщение в background script
+   * @param {Object} message - Объект сообщения
+   * @returns {Promise<any>} - Promise с ответом
+   */
+  async sendMessage(message) {
+    return new Promise((resolve, reject) => {
+      try {
+        chrome.runtime.sendMessage(message, (response) => {
+          if (chrome.runtime.lastError) {
+            reject(chrome.runtime.lastError);
+          } else {
+            resolve(response);
+          }
+        });
+      } catch (error) {
+        reject(error);
+      }
+    });
+  }
 
   /**
    * Добавить обработчик сообщений
@@ -88,8 +107,6 @@ class PageObjectChromeService {
       }
     });
   }
-
-
 
   /**
    * Открыть страницу настроек расширения

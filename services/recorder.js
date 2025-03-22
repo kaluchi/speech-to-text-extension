@@ -20,11 +20,19 @@ class PageObjectRecorderService {
     try {
       const { logger, ui, settings, media, events } = this._page;
       logger.info("Начинаем запись...");
-      ui.showMask();
+      
+      // Проверяем, нужно ли показывать визуальную маску
+      if (settings.getValue('enableRecordingMask')) {
+        ui.showMask();
+      }
       
       if (!await settings.checkApiKey()) {
         logger.warn('Запись отменена из-за отсутствия API ключа');
-        ui.hideMask();
+        
+        // Скрываем маску, если она была показана
+        if (settings.getValue('enableRecordingMask')) {
+          ui.hideMask();
+        }
         return;
       }
       
@@ -52,7 +60,11 @@ class PageObjectRecorderService {
         if (!createMediaRecorderAllowed) {
           logger.info('Разрешение получено, но окно потеряло фокус. Прерываем запись');
           media.stopAudioTracks();
-          ui.hideMask();
+          
+          // Скрываем маску, если она была показана
+          if (settings.getValue('enableRecordingMask')) {
+            ui.hideMask();
+          }
           return;
         }
         
@@ -77,15 +89,23 @@ class PageObjectRecorderService {
         ui.changeMaskColor('rgba(0, 255, 0, 0.15)');
       } catch (error) {
         logger.error("Ошибка при получении аудиопотока:", error);
-        ui.hideMask();
+        
+        // Скрываем маску, если она была показана
+        if (settings.getValue('enableRecordingMask')) {
+          ui.hideMask();
+        }
         
         // Отменяем регистрацию обработчика blur
         removeBlurHandler();
       }
     } catch (err) {
-      const { logger, ui } = this._page;
+      const { logger, ui, settings } = this._page;
       logger.error("Ошибка при запуске записи:", err);
-      ui.hideMask();
+      
+      // Скрываем маску, если она была показана
+      if (settings.getValue('enableRecordingMask')) {
+        ui.hideMask();
+      }
     }
   }
   
@@ -93,9 +113,13 @@ class PageObjectRecorderService {
    * Остановить запись аудио
    */
   stopRecording() {
-    const { logger, ui, media } = this._page;
+    const { logger, ui, media, settings } = this._page;
     logger.info("Останавливаем запись...");
-    ui.hideMask();
+    
+    // Скрываем маску, только если она показывается
+    if (settings.getValue('enableRecordingMask')) {
+      ui.hideMask();
+    }
     
     if (media.isInitializing()) {
       logger.info("Инициализация записи в процессе, ожидаем безопасной остановки...");
@@ -136,7 +160,7 @@ class PageObjectRecorderService {
       logger.info(`Обработка аудио: ${audioBlob.size} байт, Формат: ${audioBlob.type}`);
       
       // Отладочное воспроизведение
-      if (settings.getValue('debugAudio') === 'true') {
+      if (settings.getValue('debugAudio')) {
         logger.info('Отладка звука включена, воспроизводим запись');
         ui.showAudioPlayer(audioBlob);
       }
