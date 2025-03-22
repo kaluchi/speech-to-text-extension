@@ -22,7 +22,15 @@ class PageObjectMediaService {
    * Инициализация сервиса
    */
   init() {
-    // Пустой метод для соответствия интерфейсу сервиса
+    const { logger, chrome } = this._page;
+    
+    logger.info('Инициализация медиа сервиса');
+    
+    // Регистрация обработчика сообщений для проверки микрофона
+    chrome.onMessage('checkMicrophoneStatus', async () => {
+      logger.info("Получен запрос на проверку статуса микрофона");
+      return await this.checkMicrophonePermission();
+    });
   }
 
   /**

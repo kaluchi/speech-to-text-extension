@@ -78,19 +78,13 @@ class PageObjectKeyboardService {
    * Инициализация сервиса
    */
   async init() {
-    const { logger, dom, chrome } = this._page;
+    const { logger, dom } = this._page;
     
     logger.info(`Настройка обработчиков клавиши ${this._targetKey} для управления записью`);
     
     // Подписка на клавиатурные события
     dom.addDocumentEventListener('keydown', this._handleKeyDown);
     dom.addDocumentEventListener('keyup', this._handleKeyUp);
-    
-    // Регистрация обработчика сообщений для проверки микрофона
-    chrome.onMessage('checkMicrophoneStatus', async () => {
-      logger.info("Получен запрос на проверку статуса микрофона");
-      return await this._page.media.checkMicrophonePermission();
-    });
     
     // Ожидаем инициализации контроллера записи
     await this._page._initializeService('recorder');
