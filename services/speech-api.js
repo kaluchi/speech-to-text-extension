@@ -124,6 +124,7 @@ class PageObjectSpeechApiService {
         'invalid_model_id': 'Ошибка API: используется устаревшая модель распознавания. Пожалуйста, обновите расширение.',
         'options': 'Ошибка API: некорректные параметры распознавания. Проверьте настройки.',
         '401': i18n.getTranslation('invalid_api_key') || 'Неверный API ключ',
+        'detected_unusual_activity': 'Обнаружена необычная активность. Использование Free Tier отключено. Если вы используете прокси/VPN, вам может потребоваться приобрести платный тариф.',
         '429': i18n.getTranslation('api_rate_limit') || 'Превышен лимит запросов API',
         '500': i18n.getTranslation('server_error') || 'Ошибка сервера распознавания',
         'network': i18n.getTranslation('network_error') || 'Ошибка сети. Проверьте подключение к интернету',
