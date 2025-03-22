@@ -87,54 +87,37 @@ class PageObjectSpeechApiService {
    * @private
    */
   async _handleApiError(response) {
-    try {
-      // Получаем данные об ошибке
-      const errorData = await response.json();
-      
-      // Логгирование ошибки
-      this._page.logger.info('ElevenLabs API error', { 
-        status: response.status,
-        statusText: response.statusText,
-        url: response.url,
-        error: errorData
-      });
-      
-      // 1. Приоритет: локализованный текст по коду статуса из detail.status
-      if (errorData && errorData.detail && errorData.detail.status) {
-        const localizedMessage = this._page.i18n.getTranslation(errorData.detail.status);
-        if (localizedMessage !== errorData.detail.status) { // Проверка существования перевода
-          return localizedMessage;
-        } else {
-          return errorData.detail.message;
-        }
+    const { i18n } = this._page;
+    // Получаем данные об ошибке
+    const errorData = await response.json();
+
+    // Логгирование ошибки
+    this._page.logger.info('ElevenLabs API error', { 
+      status: response.status,
+      statusText: response.statusText,
+      url: response.url,
+      error: errorData
+    });
+    
+    // 1. Приоритет: локализованный текст по коду статуса из detail.status
+    if (errorData && errorData.detail && errorData.detail.status) {
+      const localizedMessage = i18n.getTranslation(errorData.detail.status);
+      if (localizedMessage !== errorData.detail.status) { // Проверка существования перевода
+        return localizedMessage;
+      } else {
+        return errorData.detail.message;
       }
-      
-      // 2. Приоритет: строковое значение в detail
-      if (errorData && errorData.detail && typeof errorData.detail === 'string') {
-        return errorData.detail;
-      }
-      
-      // 3. Приоритет: локализованное сообщение по HTTP-статусу
-      const errorKey = `api_error_${response.status}`;
-      const localizedHttpError = this._page.i18n.getTranslation(errorKey);
-      if (localizedHttpError !== errorKey) {
-        return localizedHttpError;
-      }
-      
-      // Если ничего не подошло, возвращаем общее сообщение об ошибке
-      return this._page.i18n.getTranslation('api_error_unknown');
-      
-    } catch (error) {
-      // Ошибка при парсинге JSON или другая ошибка обработки
-      this._page.logger.error('Error handling API error', error);
-      
-      // Проверка на ошибку сети
-      if (!navigator.onLine) {
-        return this._page.i18n.getTranslation('api_error_network');
-      }
-      
-      return this._page.i18n.getTranslation('api_error_unknown');
     }
+    
+    // 2. Приоритет: локализованное сообщение по HTTP-статусу
+    const errorKey = `api_error_${response.status}`;
+    const localizedHttpError = i18n.getTranslation(errorKey);
+    if (localizedHttpError !== errorKey) {
+      return localizedHttpError;
+    }
+    
+    // Если ничего не подошло, возвращаем общее сообщение об ошибке
+    return i18n.getTranslation('api_error_unknown');
   }
 }
 
