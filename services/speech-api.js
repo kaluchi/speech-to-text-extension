@@ -20,68 +20,84 @@ class PageObjectSpeechApiService {
 
   /**
    * Отправка аудио в API ElevenLabs для распознавания
-   * @param {Blob} audioBlob - Аудиоданные для распознавания
-   * @returns {Promise<string>} - Распознанный текст
    */
   async sendToElevenLabsAPI(audioBlob) {
-    const { ui, apiRequestBuilder, logger, text } = this._page;
+    const { ui, text } = this._page;
     
     try {
-      // Показываем индикатор обработки
       ui.changeMaskColor('rgba(255, 165, 0, 0.15)');
-      
-      // Получаем данные для запроса
-      const { formData, apiKey } = await apiRequestBuilder.createElevenLabsRequestData(audioBlob);
-      
-      // Отправляем запрос
-      const response = await fetch(this._apiEndpoint, {
-        method: 'POST',
-        headers: {
-          'Accept': 'application/json',
-          'xi-api-key': apiKey
-        },
-        body: formData
-      });
-      
-      // Проверяем успешность запроса
-      if (response.ok) {
-        // Получаем результат
-        const result = await response.json();
-        
-        if (!result || !result.text) {
-          throw new Error('Пустой результат распознавания');
-        }
-        
-        const recognizedText = result.text.trim();
-        
-        // Логируем успешное распознавание
-        logger.info('Текст успешно распознан:', recognizedText);
-        
-        // Вставляем распознанный текст в активный элемент
-        await text.insertText(recognizedText);
-        
-        return recognizedText;
-      } else {
-        // Обрабатываем ошибку API
-        const errorMessage = await this.handleApiError(response);
-        
-        // Вставляем сообщение об ошибке в активное поле вместо показа уведомления
-        await text.insertText(errorMessage);
-        
-        return errorMessage;
-      }
+      const response = await this._sendRequest(audioBlob);
+      const resultText = await this._processResponse(response);
+      await text.insertText(resultText);
+      return resultText;
     } catch (error) {
-      // Обрабатываем любые другие ошибки
-      logger.error('Ошибка при отправке аудио в API:', error);
-      
-      const errorMessage = error.message || this._page.i18n.getTranslation('api_error_unknown');
-      await text.insertText(errorMessage);
-      
-      return errorMessage; 
+      return this._handleGeneralError(error);
     } finally {
-      // Скрываем маску, если она еще видима
       ui.hideMask();
     }
+  }
+
+  /**
+   * Отправляет запрос к API ElevenLabs
+   * @private
+   */
+  async _sendRequest(audioBlob) {
+    const { apiRequestBuilder } = this._page;
+    const { formData, apiKey } = await apiRequestBuilder.createElevenLabsRequestData(audioBlob);
+    
+    return fetch(this._apiEndpoint, {
+      method: 'POST',
+      headers: {
+        'Accept': 'application/json',
+        'xi-api-key': apiKey
+      },
+      body: formData
+    });
+  }
+
+  /**
+   * Обрабатывает ответ от API
+   * @private
+   */
+  async _processResponse(response) {
+    const { text } = this._page;
+    
+    if (response.ok) {
+      return this._extractRecognizedText(await response.json());
+    } else {
+      const errorMessage = await this.handleApiError(response);
+      await text.insertText(errorMessage);
+      return errorMessage;
+    }
+  }
+
+  /**
+   * Извлекает распознанный текст из ответа API
+   * @private
+   */
+  _extractRecognizedText(result) {
+    const { logger } = this._page;
+    
+    if (!result || !result.text) {
+      throw new Error('Пустой результат распознавания');
+    }
+    
+    const recognizedText = result.text.trim();
+    logger.info('Текст успешно распознан:', recognizedText);
+    return recognizedText;
+  }
+
+  /**
+   * Обрабатывает общие ошибки
+   * @private
+   */
+  async _handleGeneralError(error) {
+    const { logger, text, i18n } = this._page;
+    
+    logger.error('Ошибка при отправке аудио в API:', error);
+    const errorMessage = error.message || i18n.getTranslation('api_error_unknown');
+    await text.insertText(errorMessage);
+    return errorMessage;
   }
 
   /**
