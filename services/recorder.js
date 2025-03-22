@@ -132,13 +132,16 @@ class PageObjectRecorderService {
       return;
     }
     
-    media.stopRecording();
+    // Добавляем небольшую задержку перед остановкой, чтобы гарантировать сбор данных
+    setTimeout(() => {
+      media.stopRecording();
+    }, 100); // Добавляем 100мс задержки
   }
   
   /**
    * Планирование повторных попыток остановки записи
    */
-  scheduleStopRetry(retryCount = 0, maxRetries = 10) {
+  scheduleStopRetry(retryCount = 0, maxRetries = 30) {
     const { media, logger } = this._page;
     
     if (!media.isInitializing() && media.isRecording()) {
@@ -155,22 +158,15 @@ class PageObjectRecorderService {
    * Обработка записанного аудио
    */
   async processRecording(audioBlob) {
+    const { logger, settings, ui, audioAnalyzer, speechApi, text, i18n } = this._page;
+      
     try {
-      const { logger, settings, ui, audioAnalyzer, speechApi, text, i18n } = this._page;
       logger.info(`Обработка аудио: ${audioBlob.size} байт, Формат: ${audioBlob.type}`);
       
-      // Отладочное воспроизведение
-      if (settings.getValue('debugAudio')) {
-        logger.info('Отладка звука включена, воспроизводим запись');
-        ui.showAudioPlayer(audioBlob);
-      }
-      
-      // Проверка наличия звука через сервис анализа аудио
-      const containsSound = await audioAnalyzer.hasSound(audioBlob);
-      
-      if (!containsSound) {
-        logger.info('Аудио не содержит речи, отменяем запрос к API');
-        await text.insertText(i18n.getTranslation('speech_not_detected') || 'Речь не обнаружена');
+      // Проверка на пустой аудиофайл
+      if (audioBlob.size === 0) {
+        logger.warn('Получен пустой аудиофайл');
+        await text.insertText(i18n.getTranslation('empty_audio_file') || 'Запись не удалась, попробуйте снова');
         return;
       }
       
@@ -178,7 +174,22 @@ class PageObjectRecorderService {
       ui.changeMaskColor('rgba(255, 165, 0, 0.15)');
       ui.showMask();
       
+      // Отладочное воспроизведение
+      if (settings.getValue('debugAudio')) {
+        logger.info('Отладка звука включена, воспроизводим запись');
+        ui.showAudioPlayer(audioBlob);
+      }
+      
       try {
+        // Проверка наличия звука через сервис анализа аудио
+        const containsSound = await audioAnalyzer.hasSound(audioBlob);
+        
+        if (!containsSound) {
+          logger.info('Аудио не содержит речи, отменяем запрос к API');
+          await text.insertText(i18n.getTranslation('speech_not_detected') || 'Речь не обнаружена');
+          return;
+        }
+        
         // Отправка в API через соответствующий сервис
         const response = await speechApi.sendToElevenLabsAPI(audioBlob);
         
@@ -194,14 +205,15 @@ class PageObjectRecorderService {
             this._page.chrome.openOptionsPage();
           }
         }
+      } catch (error) {
+        logger.error('Ошибка при обработке аудио:', error);
+        await text.insertText(i18n.getTranslation('audio_processing_error') || 'Ошибка обработки аудио');
       } finally {
-        // Скрываем маску после завершения обработки
-        ui.hideMask();
+        ui.hideMask(); // Скрываем маску после завершения обработки
       }
     } catch (error) {
-      const { logger, ui } = this._page;
-      logger.error("Ошибка при обработке аудио:", error);
-      ui.hideMask(); // Дополнительная проверка, чтобы маска точно была скрыта
+      logger.error('Ошибка в процессе обработки речи:', error);
+      ui.hideMask();
     }
   }
 }

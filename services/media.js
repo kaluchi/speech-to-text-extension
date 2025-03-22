@@ -276,8 +276,16 @@ class PageObjectMediaService {
       return null;
     }
     
+    // Проверяем, есть ли в массиве непустые чанки
+    const validChunks = this._chunks.filter(chunk => chunk.size > 0);
+    
+    if (validChunks.length === 0) {
+      logger.warn("Все записанные части пусты");
+      return null;
+    }
+    
     const mimeType = this._recorder ? this._recorder.mimeType : 'audio/webm';
-    return new Blob(this._chunks, { type: mimeType, ...options });
+    return new Blob(validChunks, { type: mimeType, ...options });
   }
 
   /**
