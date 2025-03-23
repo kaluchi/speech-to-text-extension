@@ -25,7 +25,7 @@ class PageObjectTextService {
    * @param {string} text - Текст для вставки
    * @returns {Promise<boolean>} - true, если вставка прошла успешно
    */
-  async insertText(text) {
+  async insertText(text = '') {
     const { logger, clipboard, dom } = this._page;
     
     try {
@@ -94,9 +94,7 @@ class PageObjectTextService {
    * @returns {boolean} - true, если вставка запрещена
    * @private
    */
-  _isPageRestricted(url) {
-    if (!url) return false;
-    
+  _isPageRestricted(url = '') {
     return this._restrictedDomains.some(domain => url.includes(domain));
   }
 
@@ -106,9 +104,7 @@ class PageObjectTextService {
    * @returns {string} - Подготовленный текст
    * @private
    */
-  _prepareTextForInsertion(text) {
-    if (!text) return '';
-    
+  _prepareTextForInsertion(text = '') {
     // Удаляем начальные и конечные пробелы
     let trimmedText = text.trim();
     
@@ -190,8 +186,8 @@ class PageObjectTextService {
    * @returns {boolean} - true, если нужна точка
    * @private
    */
-  _shouldAddPeriod(text) {
-    if (!text || text.length < 10) return false; // Слишком короткий текст
+  _shouldAddPeriod(text = '') {
+    if (text.length < 10) return false; // Слишком короткий текст
     
     const lastChar = text.charAt(text.length - 1);
     return !/[.!?;:]/.test(lastChar); // Нет знака препинания в конце
@@ -203,8 +199,8 @@ class PageObjectTextService {
    * @returns {string} - Текст с заглавной первой буквой
    * @private
    */
-  _capitalizeFirstLetter(text) {
-    if (!text) return '';
+  _capitalizeFirstLetter(text = '') {
+    if (text.length === 0) return '';
     return text.charAt(0).toUpperCase() + text.slice(1);
   }
 
@@ -285,7 +281,7 @@ class PageObjectTextService {
    * @param {string} text - Текст для вставки
    * @private
    */
-  _insertIntoContentEditable(element, text) {
+  _insertIntoContentEditable(element, text = '') {
     const { logger, dom } = this._page;
     
     try {
@@ -320,7 +316,7 @@ class PageObjectTextService {
    * @param {string} text - Текст для вставки
    * @private
    */
-  _insertIntoFormField(element, text) {
+  _insertIntoFormField(element, text = '') {
     const { logger } = this._page;
     
     try {

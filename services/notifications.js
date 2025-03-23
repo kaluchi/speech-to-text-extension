@@ -19,7 +19,7 @@ class PageObjectNotificationsService {
    * @param {string} message - Текст уведомления
    * @param {number} [duration] - Длительность показа в мс
    */
-  showInfo(message, duration = this._defaultDuration) {
+  showInfo(message = '', duration = this._defaultDuration) {
     const { ui } = this._page;
     ui.showNotification(message, 'info', duration);
   }
@@ -29,7 +29,7 @@ class PageObjectNotificationsService {
    * @param {string} message - Текст уведомления
    * @param {number} [duration] - Длительность показа в мс
    */
-  showSuccess(message, duration = this._defaultDuration) {
+  showSuccess(message = '', duration = this._defaultDuration) {
     const { ui } = this._page;
     ui.showNotification(message, 'success', duration);
   }
@@ -39,7 +39,7 @@ class PageObjectNotificationsService {
    * @param {string} message - Текст уведомления
    * @param {number} [duration] - Длительность показа в мс
    */
-  showWarning(message, duration = this._defaultDuration) {
+  showWarning(message = '', duration = this._defaultDuration) {
     const { ui } = this._page;
     ui.showNotification(message, 'warning', duration);
   }
@@ -49,7 +49,7 @@ class PageObjectNotificationsService {
    * @param {string} message - Текст уведомления
    * @param {number} [duration] - Длительность показа в мс
    */
-  showError(message, duration = this._defaultDuration) {
+  showError(message = '', duration = this._defaultDuration) {
     const { ui } = this._page;
     ui.showNotification(message, 'error', duration);
   }
@@ -60,7 +60,7 @@ class PageObjectNotificationsService {
    * @param {Object} options - Опции уведомления
    * @returns {Promise<Notification|null>} - Объект уведомления или null
    */
-  async sendBrowserNotification(title, options = {}) {
+  async sendBrowserNotification(title = '', options = {}) {
     const { logger } = this._page;
     
     try {
