@@ -124,9 +124,15 @@ class PageObjectApiRequestBuilderService {
       
       mapSettingToApi: (apiKey, settingKey, transform = (x) => x) => {
         const value = settings.getValue(settingKey);
-        apiSettings[apiKey] = transform(value) ?? null;
-        if (apiSettings[apiKey] === null) delete apiSettings[apiKey];
-        else logger.info(`Настройка ${apiKey}:`, value, '->', apiSettings[apiKey]);
+        const transformedValue = transform(value) ?? null;
+        
+        if (transformedValue === null) {
+          delete apiSettings[apiKey];
+          return;
+        }
+        
+        apiSettings[apiKey] = transformedValue;
+        logger.info(`Настройка ${apiKey}:`, value, '->', transformedValue);
       }
     };
   }

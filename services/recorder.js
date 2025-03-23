@@ -43,8 +43,9 @@ class PageObjectRecorderService {
    * При любой ошибке гарантирует корректную очистку ресурсов
    */
   async startRecording() {
+    const { logger, ui, settings, media, events } = this._page;
+    
     try {
-      const { logger, ui, settings, media, events } = this._page;
       logger.info("Начинаем запись...");
       
       // Проверяем, нужно ли показывать визуальную маску
@@ -104,6 +105,13 @@ class PageObjectRecorderService {
           logger.debug('Получены данные записи:', event.data?.size);
         });
         
+        // Настраиваем обработчик ошибок записи
+        media.onRecordingError((error) => {
+          logger.error('Ошибка записи:', error);
+          media.stopAudioTracks();
+          settings.getValue('enableRecordingMask') && ui.hideMask();
+        });
+        
         // Настраиваем обработчик остановки записи
         media.onRecordingStop(() => {
           const audioBlob = media.getRecordedBlob();
@@ -135,7 +143,6 @@ class PageObjectRecorderService {
       }
     } catch (err) {
       // Обработка непредвиденных ошибок
-      const { logger, ui, settings } = this._page;
       logger.error("Ошибка при запуске записи:", err);
       
       // Скрываем маску, если она была показана
@@ -154,6 +161,7 @@ class PageObjectRecorderService {
    */
   stopRecording() {
     const { logger, ui, media, settings } = this._page;
+    
     logger.info("Останавливаем запись...");
     
     // Скрываем маску, только если она показывается
@@ -218,7 +226,7 @@ class PageObjectRecorderService {
    */
   async processRecording(audioBlob) {
     const { logger, settings, ui, audioAnalyzer, speechApi, text, i18n } = this._page;
-      
+    
     try {
       logger.info(`Обработка аудио: ${audioBlob?.size} байт, Формат: ${audioBlob?.type}`);
       

@@ -133,7 +133,26 @@ class PageObjectSettingsService {
     }
   }
 
-
+  /**
+   * Подписка на изменение настройки
+   * @param {string} key - Ключ настройки
+   * @param {Function} handler - Функция-обработчик (newValue, oldValue) => void
+   * @returns {Function} - Функция для отписки от изменений
+   */
+  onSettingChange(key, handler) {
+    if (!this._changeHandlers.has(key)) {
+      this._changeHandlers.set(key, new Set());
+    }
+    
+    this._changeHandlers.get(key).add(handler);
+    
+    // Возвращаем функцию для отписки
+    return () => {
+      if (this._changeHandlers.has(key)) {
+        this._changeHandlers.get(key).delete(handler);
+      }
+    };
+  }
 
   /**
    * Проверка API ключа
@@ -149,8 +168,6 @@ class PageObjectSettingsService {
     chrome.openOptionsPage();
     return false;
   }
-
-
 
   /**
    * Настройка слушателя изменений хранилища

@@ -16,6 +16,30 @@ class PageObjectEventsService {
   }
 
   /**
+   * Очистка всех обработчиков событий
+   * Вызывается при уничтожении сервиса
+   */
+  dispose() {
+    const { dom } = this._page;
+    
+    // Очистка обработчиков document
+    this._documentListeners.forEach((handlers, eventType) => {
+      handlers.forEach(handler => {
+        dom.removeDocumentEventListener(eventType, handler);
+      });
+    });
+    this._documentListeners.clear();
+    
+    // Очистка обработчиков window
+    this._windowListeners.forEach((handlers, eventType) => {
+      handlers.forEach(handler => {
+        dom.removeWindowEventListener(eventType, handler);
+      });
+    });
+    this._windowListeners.clear();
+  }
+
+  /**
    * Добавляет обработчик события к document
    * @param {string} eventType - Тип события
    * @param {Function} handler - Функция обработчика
@@ -123,8 +147,6 @@ class PageObjectEventsService {
   onWindowBlur(handler) {
     return this.addWindowListener('blur', handler);
   }
-
-
 }
 
 // Экспортируем класс в глобальную область видимости

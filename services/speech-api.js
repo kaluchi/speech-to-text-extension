@@ -8,18 +8,13 @@
  * @see https://docs.elevenlabs.io/api-reference/speech-to-text
  */
 class PageObjectSpeechApiService {
-  // URL API конечной точки
-  static API_ENDPOINT = 'https://api.elevenlabs.io/v1/speech-to-text';
-  // Название заголовка для API ключа
-  static API_HEADER_KEY = 'xi-api-key';
-  
   /**
    * Создает экземпляр сервиса
    * @param {PageObject} pageObject - Центральный объект PageObject
    */
   constructor(pageObject) {
     this._page = pageObject;
-    this._apiEndpoint = PageObjectSpeechApiService.API_ENDPOINT;
+    this._apiEndpoint = 'https://api.elevenlabs.io/v1/speech-to-text';
   }
 
   /**
@@ -83,7 +78,7 @@ class PageObjectSpeechApiService {
       method: 'POST',
       headers: {
         'Accept': 'application/json',
-        [PageObjectSpeechApiService.API_HEADER_KEY]: apiKey
+        'xi-api-key': apiKey
       },
       body: formData
     });
@@ -151,10 +146,10 @@ class PageObjectSpeechApiService {
       // Стратегия 1: Использовать код статуса из detail.status
       if (errorData?.detail?.status) {
         const localizedMessage = i18n.getTranslation(errorData.detail.status);
-        // Возвращаем локализованное сообщение, если оно найдено, или сообщение из API
+        // Если нашли локализацию, возвращаем её, иначе сообщение из API
         return localizedMessage !== errorData.detail.status 
           ? localizedMessage 
-          : errorData.detail.message;
+          : (errorData.detail.message || i18n.getTranslation('api_error_unknown'));
       }
       
       // Стратегия 2: Использовать HTTP статус
@@ -170,8 +165,6 @@ class PageObjectSpeechApiService {
     // Стратегия 3: Общая ошибка
     return i18n.getTranslation('api_error_unknown');
   }
-
-
 }
 
 // Экспортируем класс в глобальную область видимости

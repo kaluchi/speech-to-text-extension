@@ -41,18 +41,17 @@ class PageObjectDomService {
   createElement(tagName, attributes = {}, styles = {}, textContent = '') {
     const element = document.createElement(tagName);
     
-    // Устанавливаем атрибуты
-    Object.entries(attributes).forEach(([key, value]) => 
-      value != null && element.setAttribute(key, value)
-    );
+    // Устанавливаем атрибуты и стили
+    for (const [key, value] of Object.entries(attributes)) {
+      if (value != null) element.setAttribute(key, value);
+    }
     
-    // Устанавливаем стили
-    Object.entries(styles).forEach(([key, value]) => 
-      value != null && (element.style[key] = value)
-    );
+    for (const [key, value] of Object.entries(styles)) {
+      if (value != null) element.style[key] = value;
+    }
     
     // Устанавливаем текстовое содержимое
-    textContent && (element.textContent = textContent);
+    if (textContent) element.textContent = textContent;
     
     return element;
   }
@@ -102,9 +101,8 @@ class PageObjectDomService {
     if (!element) return false;
     
     // Проверяем input, textarea или contenteditable
-    return (element.tagName === 'INPUT' || element.tagName === 'TEXTAREA') 
-      ? !element.disabled && !element.readOnly
-      : element.isContentEditable;
+    const isInputOrTextarea = element.tagName === 'INPUT' || element.tagName === 'TEXTAREA';
+    return isInputOrTextarea ? !element.disabled && !element.readOnly : element.isContentEditable;
   }
 
   /**

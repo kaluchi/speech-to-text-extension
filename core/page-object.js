@@ -70,7 +70,7 @@ class PageObject {
 
     try {
       // Получаем сервис из глобальной области видимости
-      const globalServiceName = `PageObject${serviceName.charAt(0).toUpperCase() + serviceName.slice(1)}Service`;
+      const globalServiceName = `PageObject${serviceName.charAt(0).toUpperCase()}${serviceName.slice(1)}Service`;
       const ServiceClass = window[globalServiceName] || 
         (() => { throw new Error(`Сервис ${serviceName} не найден в глобальной области видимости`); })();
       

@@ -2,40 +2,6 @@
  * Сервис для работы с медиа (аудио, микрофон, запись)
  */
 class PageObjectMediaService {
-  // Константы для типов MIME
-  static MIME_TYPE = {
-    MP4: 'audio/mp4',
-    WEBM: 'audio/webm',
-    WEBM_OPUS: 'audio/webm;codecs=opus',
-    OGG_OPUS: 'audio/ogg;codecs=opus',
-    DEFAULT: 'audio/webm'
-  };
-  
-  // Константы для ошибок микрофона
-  static ERROR_TYPE = {
-    NOT_ALLOWED: 'NotAllowedError',
-    PERMISSION_DENIED: 'PermissionDeniedError',
-    NOT_FOUND: 'NotFoundError',
-    DEVICES_NOT_FOUND: 'DevicesNotFoundError',
-    NOT_READABLE: 'NotReadableError',
-    TRACK_START_ERROR: 'TrackStartError',
-    OVERCONSTRAINED: 'OverconstrainedError',
-    CONSTRAINT_NOT_SATISFIED: 'ConstraintNotSatisfiedError',
-    TYPE_ERROR: 'TypeError'
-  };
-  
-  // Константы для состояний записи
-  static RECORDER_STATE = {
-    INACTIVE: 'inactive'
-  };
-  
-  // Константы для типов устройств
-  static DEVICE_TYPE = {
-    AUDIO_INPUT: 'audioinput'
-  };
-  
-
-  
   constructor(pageObject) {
     this._page = pageObject;
     this._stream = null;
@@ -68,13 +34,23 @@ class PageObjectMediaService {
   }
 
   /**
+   * Освобождение ресурсов при уничтожении сервиса
+   */
+  dispose() {
+    this.stopAudioTracks();
+    this._recorder = null;
+    this._chunks = [];
+    this._isRecording = false;
+    this._isInitializing = false;
+  }
+
+  /**
    * Получение аудиопотока с микрофона
    * @param {string} preferredDeviceId - Предпочитаемый ID устройства
    * @returns {Promise<MediaStream>} - Promise с медиапотоком
    */
   async getAudioStream(preferredDeviceId = null) {
     const { logger } = this._page;
-    const { ERROR_TYPE } = PageObjectMediaService;
     
     try {
       this._isInitializing = true;
@@ -95,7 +71,7 @@ class PageObjectMediaService {
       // Получаем поток
       this._stream = await navigator.mediaDevices.getUserMedia(constraints).catch(err => {
         // Если не удалось получить указанное устройство, пробуем любое доступное
-        if (preferredDeviceId && err.name === ERROR_TYPE.OVERCONSTRAINED) {
+        if (preferredDeviceId && err.name === 'OverconstrainedError') {
           logger.warn("Не удалось использовать предпочитаемый микрофон, пробуем микрофон по умолчанию");
           return navigator.mediaDevices.getUserMedia({ audio: this._baseAudioConstraints });
         }
@@ -122,7 +98,7 @@ class PageObjectMediaService {
     
     try {
       const devices = await navigator.mediaDevices.enumerateDevices();
-      return devices.filter(device => device.kind === PageObjectMediaService.DEVICE_TYPE.AUDIO_INPUT);
+      return devices.filter(device => device.kind === 'audioinput');
     } catch (error) {
       logger.error("Ошибка при получении списка устройств:", error);
       return [];
@@ -172,7 +148,6 @@ class PageObjectMediaService {
    */
   _getErrorMessageForMicrophone(error) {
     const { i18n } = this._page;
-    const { ERROR_TYPE } = PageObjectMediaService;
     
     if (!error) {
       return i18n.getTranslation('unknown_error') || 'Неизвестная ошибка';
@@ -180,23 +155,23 @@ class PageObjectMediaService {
     
     if (error.name) {
       switch (error.name) {
-        case ERROR_TYPE.NOT_ALLOWED:
-        case ERROR_TYPE.PERMISSION_DENIED:
+        case 'NotAllowedError':
+        case 'PermissionDeniedError':
           return i18n.getTranslation('mic_access_denied') || 'Доступ к микрофону запрещен';
           
-        case ERROR_TYPE.NOT_FOUND:
-        case ERROR_TYPE.DEVICES_NOT_FOUND:
+        case 'NotFoundError':
+        case 'DevicesNotFoundError':
           return i18n.getTranslation('mic_not_found') || 'Микрофон не найден';
           
-        case ERROR_TYPE.NOT_READABLE:
-        case ERROR_TYPE.TRACK_START_ERROR:
+        case 'NotReadableError':
+        case 'TrackStartError':
           return i18n.getTranslation('mic_in_use') || 'Микрофон используется другим приложением';
           
-        case ERROR_TYPE.OVERCONSTRAINED:
-        case ERROR_TYPE.CONSTRAINT_NOT_SATISFIED:
+        case 'OverconstrainedError':
+        case 'ConstraintNotSatisfiedError':
           return i18n.getTranslation('technical_limitations') || 'Технические ограничения';
           
-        case ERROR_TYPE.TYPE_ERROR:
+        case 'TypeError':
           return i18n.getTranslation('incorrect_data_type') || 'Некорректный тип данных';
           
         default:
@@ -267,9 +242,8 @@ class PageObjectMediaService {
    */
   stopRecording() {
     const { logger } = this._page;
-    const { RECORDER_STATE } = PageObjectMediaService;
     
-    if (!this._recorder || this._recorder.state === RECORDER_STATE.INACTIVE) {
+    if (!this._recorder || this._recorder.state === 'inactive') {
       logger.warn("MediaRecorder не активен");
       this.stopAudioTracks();
       return false;
@@ -316,7 +290,6 @@ class PageObjectMediaService {
    */
   getRecordedBlob(options = {}) {
     const { logger } = this._page;
-    const { MIME_TYPE } = PageObjectMediaService;
     
     if (this._chunks.length === 0) {
       logger.info("Нет записанных данных");
@@ -331,7 +304,7 @@ class PageObjectMediaService {
       return null;
     }
     
-    const mimeType = this._recorder ? this._recorder.mimeType : MIME_TYPE.DEFAULT;
+    const mimeType = this._recorder ? this._recorder.mimeType : 'audio/webm';
     return new Blob(validChunks, { type: mimeType, ...options });
   }
 
@@ -389,14 +362,13 @@ class PageObjectMediaService {
    */
   getSupportedMimeType() {
     const { logger } = this._page;
-    const { MIME_TYPE } = PageObjectMediaService;
     
     // Список возможных типов в порядке предпочтения
     const possibleTypes = [
-      MIME_TYPE.MP4,
-      MIME_TYPE.WEBM,
-      MIME_TYPE.WEBM_OPUS,
-      MIME_TYPE.OGG_OPUS
+      'audio/mp4',
+      'audio/webm',
+      'audio/webm;codecs=opus',
+      'audio/ogg;codecs=opus'
     ];
     
     // Ищем первый поддерживаемый тип
