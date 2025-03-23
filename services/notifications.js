@@ -83,7 +83,7 @@ class PageObjectNotificationsService {
       // Устанавливаем значок, если не указан
       if (!options.icon) {
         const manifest = chrome.runtime.getManifest();
-        const iconUrl = manifest.icons && manifest.icons['48'];
+        const iconUrl = manifest.icons?.['48'];
         
         if (iconUrl) {
           options.icon = chrome.runtime.getURL(iconUrl);

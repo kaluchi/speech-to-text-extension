@@ -33,8 +33,8 @@ class PageObjectTextService {
       const activeElement = dom.getActiveElement();
       logger.info(
         'Попытка вставки текста. Активный элемент:', 
-        activeElement ? activeElement.tagName : 'отсутствует', 
-        'contentEditable:', activeElement ? activeElement.isContentEditable : false
+        activeElement?.tagName || 'отсутствует', 
+        'contentEditable:', activeElement?.isContentEditable || false
       );
       
       // Проверка ограничений по домену
@@ -212,9 +212,9 @@ class PageObjectTextService {
    */
   _getCurrentText(element) {
     if (element.isContentEditable) {
-      return element.textContent;
+      return element.textContent || '';
     } else if (element.tagName === 'TEXTAREA' || element.tagName === 'INPUT') {
-      return element.value;
+      return element.value || '';
     }
     return '';
   }
@@ -229,10 +229,10 @@ class PageObjectTextService {
     const { dom } = this._page;
     
     if (element.tagName === 'TEXTAREA' || element.tagName === 'INPUT') {
-      return element.selectionStart;
+      return element.selectionStart || 0;
     } else if (element.isContentEditable) {
       const selection = dom.getSelection();
-      if (selection.rangeCount > 0) {
+      if (selection?.rangeCount > 0) {
         const range = selection.getRangeAt(0);
         return this._getTextOffsetInContentEditable(element, range.startContainer, range.startOffset);
       }
@@ -259,9 +259,9 @@ class PageObjectTextService {
       }
       
       if (currentNode.nodeType === Node.TEXT_NODE) {
-        totalOffset += currentNode.textContent.length;
+        totalOffset += currentNode.textContent?.length || 0;
       } else {
-        for (let i = 0; i < currentNode.childNodes.length; i++) {
+        for (let i = 0; i < (currentNode.childNodes?.length || 0); i++) {
           if (traverse(currentNode.childNodes[i])) {
             return true;
           }
@@ -286,7 +286,7 @@ class PageObjectTextService {
     
     try {
       const selection = dom.getSelection();
-      if (selection.rangeCount > 0) {
+      if (selection?.rangeCount > 0) {
         const range = selection.getRangeAt(0);
         
         // Удаляем выделенный текст
@@ -320,11 +320,11 @@ class PageObjectTextService {
     const { logger } = this._page;
     
     try {
-      const start = element.selectionStart;
-      const end = element.selectionEnd;
+      const start = element.selectionStart || 0;
+      const end = element.selectionEnd || 0;
       
       // Объединяем текст
-      const currentValue = element.value;
+      const currentValue = element.value || '';
       element.value = currentValue.substring(0, start) + text + currentValue.substring(end);
       
       // Устанавливаем курсор в конец вставленного текста

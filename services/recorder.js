@@ -53,7 +53,7 @@ class PageObjectRecorderService {
         const stream = await media.getAudioStream(preferredMicrophoneId);
         
         // Отменяем регистрацию обработчика blur
-        removeBlurHandler();
+        removeBlurHandler?.();
         
         if (!createMediaRecorderAllowed) {
           logger.info('Разрешение получено, но окно потеряло фокус. Прерываем запись');
@@ -69,7 +69,7 @@ class PageObjectRecorderService {
         
         // Используем сервис media для настройки обработчиков событий
         media.onDataAvailable((event) => {
-          logger.debug('Получены данные записи:', event.data.size);
+          logger.debug('Получены данные записи:', event.data?.size);
         });
         
         media.onRecordingStop(() => {
@@ -94,7 +94,7 @@ class PageObjectRecorderService {
         settings.getValue('enableRecordingMask') && ui.hideMask();
         
         // Отменяем регистрацию обработчика blur
-        removeBlurHandler();
+        removeBlurHandler?.();
       }
     } catch (err) {
       const { logger, ui, settings } = this._page;
@@ -152,10 +152,10 @@ class PageObjectRecorderService {
     const { logger, settings, ui, audioAnalyzer, speechApi, text, i18n } = this._page;
       
     try {
-      logger.info(`Обработка аудио: ${audioBlob.size} байт, Формат: ${audioBlob.type}`);
+      logger.info(`Обработка аудио: ${audioBlob?.size} байт, Формат: ${audioBlob?.type}`);
       
       // Проверка на пустой аудиофайл
-      if (audioBlob.size === 0) {
+      if (audioBlob?.size === 0) {
         logger.warn('Получен пустой аудиофайл');
         await text.insertText(i18n.getTranslation('empty_audio_file') || 'Запись не удалась, попробуйте снова');
         return;
@@ -179,7 +179,7 @@ class PageObjectRecorderService {
       // Отправка в API через соответствующий сервис
       const response = await speechApi.sendToElevenLabsAPI(audioBlob);
       // Вставляем результат в активный элемент
-      await text.insertText(response.result);
+      await text.insertText(response?.result);
     
     } catch (error) {
       logger.error("Ошибка при обработке аудио:", error);
