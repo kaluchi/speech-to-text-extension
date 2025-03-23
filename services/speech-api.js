@@ -14,7 +14,6 @@ class PageObjectSpeechApiService {
    */
   constructor(pageObject) {
     this._page = pageObject;
-    this._apiEndpoint = 'https://api.elevenlabs.io/v1/speech-to-text';
   }
 
   /**
@@ -74,7 +73,7 @@ class PageObjectSpeechApiService {
   async _sendRequest(audioBlob) {
     const { formData, apiKey } = await this._page.apiRequestBuilder.createElevenLabsRequestData(audioBlob);
     
-    return fetch(this._apiEndpoint, {
+    return fetch('https://api.elevenlabs.io/v1/speech-to-text', {
       method: 'POST',
       headers: {
         'Accept': 'application/json',
