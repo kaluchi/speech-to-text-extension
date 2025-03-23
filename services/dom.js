@@ -42,23 +42,17 @@ class PageObjectDomService {
     const element = document.createElement(tagName);
     
     // Устанавливаем атрибуты
-    Object.entries(attributes).forEach(([key, value]) => {
-      if (value !== undefined && value !== null) {
-        element.setAttribute(key, value);
-      }
-    });
+    Object.entries(attributes).forEach(([key, value]) => 
+      value != null && element.setAttribute(key, value)
+    );
     
     // Устанавливаем стили
-    Object.entries(styles).forEach(([key, value]) => {
-      if (value !== undefined && value !== null) {
-        element.style[key] = value;
-      }
-    });
+    Object.entries(styles).forEach(([key, value]) => 
+      value != null && (element.style[key] = value)
+    );
     
     // Устанавливаем текстовое содержимое
-    if (textContent) {
-      element.textContent = textContent;
-    }
+    textContent && (element.textContent = textContent);
     
     return element;
   }
@@ -96,9 +90,7 @@ class PageObjectDomService {
    * @param {HTMLElement} element - Элемент для удаления
    */
   removeElement(element) {
-    if (element && element.parentNode) {
-      element.parentNode.removeChild(element);
-    }
+    element?.parentNode?.removeChild(element);
   }
 
   /**
@@ -109,13 +101,10 @@ class PageObjectDomService {
   isEditableElement(element) {
     if (!element) return false;
     
-    // Проверяем input и textarea
-    if (element.tagName === 'INPUT' || element.tagName === 'TEXTAREA') {
-      return !element.disabled && !element.readOnly;
-    }
-    
-    // Проверяем contenteditable
-    return element.isContentEditable;
+    // Проверяем input, textarea или contenteditable
+    return (element.tagName === 'INPUT' || element.tagName === 'TEXTAREA') 
+      ? !element.disabled && !element.readOnly
+      : element.isContentEditable;
   }
 
   /**
@@ -158,18 +147,6 @@ class PageObjectDomService {
   }
 
   /**
-   * Удаляет обработчик события с элемента
-   * @param {HTMLElement} element - DOM элемент
-   * @param {string} eventType - Тип события
-   * @param {Function} handler - Функция обработчика
-   * @param {Object} options - Опции события
-   */
-  removeEventListener(element, eventType, handler, options = {}) {
-    element.removeEventListener(eventType, handler, options);
-  }
-
-
-  /**
    * Генерирует DOM событие и отправляет его на элемент
    * @param {HTMLElement} element - Элемент для отправки события
    * @param {string} eventName - Имя события
@@ -183,6 +160,33 @@ class PageObjectDomService {
     return event;
   }
 
+  /**
+   * Добавляет обработчик события к window
+   * @param {string} eventType - Тип события
+   * @param {Function} handler - Функция обработчика
+   * @param {Object} options - Опции события (capture, once, passive)
+   */
+  addWindowEventListener(eventType, handler, options = {}) {
+    window.addEventListener(eventType, handler, options);
+  }
+
+  /**
+   * Удаляет обработчик события с window
+   * @param {string} eventType - Тип события
+   * @param {Function} handler - Функция обработчика
+   * @param {Object} options - Опции события
+   */
+  removeWindowEventListener(eventType, handler, options = {}) {
+    window.removeEventListener(eventType, handler, options);
+  }
+
+  /**
+   * Получает URL текущей страницы
+   * @returns {string} - URL текущей страницы
+   */
+  getLocationHref() {
+    return window.location.href;
+  }
 
 }
 

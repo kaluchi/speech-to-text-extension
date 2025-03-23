@@ -71,25 +71,21 @@ class PageObject {
     try {
       // Получаем сервис из глобальной области видимости
       const globalServiceName = `PageObject${serviceName.charAt(0).toUpperCase() + serviceName.slice(1)}Service`;
-      const ServiceClass = window[globalServiceName];
-      
-      if (!ServiceClass) {
-        throw new Error(`Сервис ${serviceName} не найден в глобальной области видимости`);
-      }
+      const ServiceClass = window[globalServiceName] || 
+        (() => { throw new Error(`Сервис ${serviceName} не найден в глобальной области видимости`); })();
       
       const service = this._services[serviceName] = new ServiceClass(this);
       
       // Если у сервиса есть метод init, вызываем его
-      if (typeof service.init === 'function') {
-        await service.init();
-      }
+      typeof service.init === 'function' && await service.init();
       
       // Создаем getter для удобного доступа (page.dom вместо page.getService('dom'))
       Object.defineProperty(this, serviceName, { get: () => service });
       
+      // Логируем успешную инициализацию
       const { logger } = this;
-      serviceName === 'logger'
-        ? console.log(`Сервис "${serviceName}" инициализирован`)
+      serviceName === 'logger' 
+        ? console.log(`Сервис "${serviceName}" инициализирован`) 
         : logger?.info(`Сервис "${serviceName}" инициализирован`);
       
       return service;

@@ -10,8 +10,6 @@ class PageObjectKeyboardService {
   };
   
   // Константы клавиш
-  
-  // Константы клавиш
   static KEY = {
     META: 'Meta',
     CONTROL: 'Control'
@@ -42,9 +40,9 @@ class PageObjectKeyboardService {
    * @private
    */
   _bindMethods() {
-    this._handleKeyDown = this._handleKeyDown.bind(this);
-    this._handleKeyUp = this._handleKeyUp.bind(this);
-    this._isTargetKey = this._isTargetKey.bind(this);
+    ['_handleKeyDown', '_handleKeyUp', '_isTargetKey'].forEach(
+      method => this[method] = this[method].bind(this)
+    );
   }
   
   /**
@@ -168,10 +166,7 @@ class PageObjectKeyboardService {
    * @private
    */
   _clearTimeout() {
-    if (this._timeoutId) {
-      clearTimeout(this._timeoutId);
-      this._timeoutId = null;
-    }
+    this._timeoutId && (clearTimeout(this._timeoutId), this._timeoutId = null);
   }
   
   /**

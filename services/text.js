@@ -90,8 +90,9 @@ class PageObjectTextService {
     this._logActiveElementInfo(activeElement);
     
     // Проверка ограничений по домену
-    if (this._isPageRestricted(window.location.href)) {
-      logger.info('Вставка текста запрещена на данном домене', window.location.href);
+    const currentUrl = dom.getLocationHref();
+    if (this._isPageRestricted(currentUrl)) {
+      logger.info('Вставка текста запрещена на данном домене', currentUrl);
       return null;
     }
     

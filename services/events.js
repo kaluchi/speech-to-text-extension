@@ -57,7 +57,8 @@ class PageObjectEventsService {
    * @returns {Function} - Функция для удаления обработчика
    */
   addWindowListener(eventType, handler, options = {}) {
-    window.addEventListener(eventType, handler, options);
+    const { dom } = this._page;
+    dom.addWindowEventListener(eventType, handler, options);
     
     // Сохраняем обработчик для возможности его удаления
     if (!this._windowListeners.has(eventType)) {
@@ -74,7 +75,8 @@ class PageObjectEventsService {
    * @param {Function} handler - Функция обработчика
    */
   removeWindowListener(eventType, handler) {
-    window.removeEventListener(eventType, handler);
+    const { dom } = this._page;
+    dom.removeWindowEventListener(eventType, handler);
     
     if (this._windowListeners.has(eventType)) {
       this._windowListeners.get(eventType).delete(handler);

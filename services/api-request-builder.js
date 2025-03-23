@@ -113,20 +113,22 @@ class PageObjectApiRequestBuilderService {
    * @private
    */
   _createSettingHelpers(apiSettings, settings, logger) {
-    const addSetting = (apiKey, value, transform = (x) => x) => {
-      const transformedValue = transform(value);
-      if (transformedValue !== null) {
-        apiSettings[apiKey] = transformedValue;
-        logger.info(`Настройка ${apiKey}:`, value, '->', transformedValue);
+    return {
+      addSetting: (apiKey, value, transform = (x) => x) => {
+        const transformedValue = transform(value);
+        if (transformedValue !== null) {
+          apiSettings[apiKey] = transformedValue;
+          logger.info(`Настройка ${apiKey}:`, value, '->', transformedValue);
+        }
+      },
+      
+      mapSettingToApi: (apiKey, settingKey, transform = (x) => x) => {
+        const value = settings.getValue(settingKey);
+        apiSettings[apiKey] = transform(value) ?? null;
+        if (apiSettings[apiKey] === null) delete apiSettings[apiKey];
+        else logger.info(`Настройка ${apiKey}:`, value, '->', apiSettings[apiKey]);
       }
     };
-    
-    const mapSettingToApi = (apiKey, settingKey, transform = (x) => x) => {
-      const value = settings.getValue(settingKey);
-      addSetting(apiKey, value, transform);
-    };
-    
-    return { addSetting, mapSettingToApi };
   }
   
 
