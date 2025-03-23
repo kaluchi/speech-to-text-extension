@@ -34,10 +34,7 @@ class PageObjectMediaService {
     AUDIO_INPUT: 'audioinput'
   };
   
-  // Константы для сообщений
-  static MESSAGE = {
-    CHECK_MIC_STATUS: 'checkMicrophoneStatus'
-  };
+
   
   constructor(pageObject) {
     this._page = pageObject;
@@ -64,7 +61,7 @@ class PageObjectMediaService {
     logger.info('Инициализация медиа сервиса');
     
     // Регистрация обработчика сообщений для проверки микрофона
-    chrome.onMessage(PageObjectMediaService.MESSAGE.CHECK_MIC_STATUS, async () => {
+    chrome.onMessage('checkMicrophoneStatus', async () => {
       logger.info("Получен запрос на проверку статуса микрофона");
       return await this.checkMicrophonePermission();
     });

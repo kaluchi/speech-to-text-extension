@@ -9,11 +9,7 @@ class PageObjectKeyboardService {
     RECORDING: 'recording'
   };
   
-  // Константы событий клавиатуры
-  static EVENT = {
-    KEYDOWN: 'keydown',
-    KEYUP: 'keyup'
-  };
+  // Константы клавиш
   
   // Константы клавиш
   static KEY = {
@@ -60,8 +56,8 @@ class PageObjectKeyboardService {
     logger.info(`Настройка обработчиков клавиши ${this._targetKey} для управления записью`);
     
     // Подписка на клавиатурные события
-    dom.addDocumentEventListener(PageObjectKeyboardService.EVENT.KEYDOWN, this._handleKeyDown);
-    dom.addDocumentEventListener(PageObjectKeyboardService.EVENT.KEYUP, this._handleKeyUp);
+    dom.addDocumentEventListener('keydown', this._handleKeyDown);
+    dom.addDocumentEventListener('keyup', this._handleKeyUp);
     
     // Ожидаем инициализации контроллера записи
     await this._page._initializeService('recorder');

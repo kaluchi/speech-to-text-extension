@@ -8,16 +8,10 @@
  * @see https://docs.elevenlabs.io/api-reference/speech-to-text
  */
 class PageObjectSpeechApiService {
-  // Константы для работы с API
-  static API = {
-    ENDPOINT: 'https://api.elevenlabs.io/v1/speech-to-text',
-    HEADERS: {
-      ACCEPT: 'Accept',
-      API_KEY: 'xi-api-key'
-    },
-    METHOD: 'POST',
-    CONTENT_TYPE: 'application/json'
-  };
+  // URL API конечной точки
+  static API_ENDPOINT = 'https://api.elevenlabs.io/v1/speech-to-text';
+  // Название заголовка для API ключа
+  static API_HEADER_KEY = 'xi-api-key';
   
   /**
    * Создает экземпляр сервиса
@@ -25,7 +19,7 @@ class PageObjectSpeechApiService {
    */
   constructor(pageObject) {
     this._page = pageObject;
-    this._apiEndpoint = PageObjectSpeechApiService.API.ENDPOINT;
+    this._apiEndpoint = PageObjectSpeechApiService.API_ENDPOINT;
   }
 
   /**
@@ -82,14 +76,14 @@ class PageObjectSpeechApiService {
    */
   async _sendRequest(audioBlob) {
     const { apiRequestBuilder } = this._page;
-    const { API } = PageObjectSpeechApiService;
+
     const { formData, apiKey } = await apiRequestBuilder.createElevenLabsRequestData(audioBlob);
     
     return fetch(this._apiEndpoint, {
-      method: API.METHOD,
+      method: 'POST',
       headers: {
-        [API.HEADERS.ACCEPT]: API.CONTENT_TYPE,
-        [API.HEADERS.API_KEY]: apiKey
+        'Accept': 'application/json',
+        [PageObjectSpeechApiService.API_HEADER_KEY]: apiKey
       },
       body: formData
     });
