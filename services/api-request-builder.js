@@ -2,6 +2,36 @@
  * Сервис для формирования запросов к API распознавания речи
  */
 class PageObjectApiRequestBuilderService {
+  /**
+   * Константы ключей настроек API
+   */
+  static API_KEYS = {
+    MODEL_ID: 'model_id',
+    LANGUAGE_CODE: 'language_code',
+    TAG_AUDIO_EVENTS: 'tag_audio_events',
+    TIMESTAMPS_GRANULARITY: 'timestamps_granularity',
+    DIARIZE: 'diarize',
+    NUM_SPEAKERS: 'num_speakers',
+    BIASED_KEYWORDS: 'biased_keywords'
+  };
+  
+  /**
+   * Константы ключей настроек расширения
+   */
+  static SETTINGS_KEYS = {
+    API_KEY: 'apiKey',
+    LANGUAGE_CODE: 'languageCode',
+    TAG_AUDIO_EVENTS: 'tagAudioEvents',
+    TIMESTAMPS_GRANULARITY: 'timestampsGranularity',
+    DIARIZE: 'diarize',
+    NUM_SPEAKERS: 'numSpeakers',
+    BIASED_KEYWORDS: 'biasedKeywords'
+  };
+
+  /**
+   * Создает экземпляр сервиса
+   * @param {PageObject} pageObject - Центральный объект PageObject
+   */
   constructor(pageObject) {
     this._page = pageObject;
   }
@@ -17,9 +47,6 @@ class PageObjectApiRequestBuilderService {
    * Создание FormData для запроса к API ElevenLabs
    * @param {Blob} audioBlob - Аудиоданные для распознавания
    * @returns {Promise<{formData: FormData, apiKey: string}>} - FormData для запроса и API ключ
-   * 
-   * Ключевая ответственность: только заполнение formData обязательными полями
-   * и вставка готовых значений из apiSettings. Без логирования или трансформации значений.
    */
   async createElevenLabsRequestData(audioBlob) {
     const { logger } = this._page;
@@ -27,16 +54,8 @@ class PageObjectApiRequestBuilderService {
     // Получаем подготовленные настройки и API ключ
     const { apiSettings, apiKey } = await this._loadApiSettings();
     
-    // Создаем FormData для отправки
-    const formData = new FormData();
-    
-    // Добавляем только аудиофайл
-    formData.append('file', audioBlob, 'speech.webm');
-    
-    // Добавляем все подготовленные параметры без дополнительных проверок
-    Object.entries(apiSettings).forEach(([key, value]) => {
-      formData.append(key, value);
-    });
+    // Создаем FormData с аудиофайлом и параметрами
+    const formData = this._createFormDataWithAudio(audioBlob, apiSettings);
     
     // Логируем информацию о запросе
     logger.info(`Подготовлен запрос для распознавания, формат: ${audioBlob.type}, размер: ${audioBlob.size} байт`);
@@ -45,30 +64,81 @@ class PageObjectApiRequestBuilderService {
   }
 
   /**
+   * Создает FormData и добавляет в него аудиофайл и параметры API
+   * @param {Blob} audioBlob - Аудиоданные
+   * @param {Object} apiSettings - Настройки API
+   * @returns {FormData} - Подготовленный объект FormData
+   * @private
+   */
+  _createFormDataWithAudio(audioBlob, apiSettings) {
+    // Создаем FormData для отправки
+    const formData = new FormData();
+    
+    // Добавляем аудиофайл
+    formData.append('file', audioBlob, 'speech.webm');
+    
+    // Добавляем все параметры API
+    Object.entries(apiSettings).forEach(([key, value]) => {
+      formData.append(key, value);
+    });
+    
+    return formData;
+  }
+
+  /**
    * Загрузка и подготовка настроек API из хранилища
    * @returns {Promise<{apiSettings: Object, apiKey: string}>} - Настройки API и API ключ
    * @private
-   * 
-   * Ключевая ответственность: 
-   * 1. Получение и проверка API ключа из настроек
-   * 2. Формирование базовых параметров API (model_id, language_code)
-   * 3. Добавление настроек API из пользовательских настроек
-   * 4. Обработка специальных параметров (ключевые слова)
-   * 5. Логирование итоговых настроек для отладки
    */
   async _loadApiSettings() {
     const { settings, logger } = this._page;
     
     // Получаем и проверяем API ключ
-    const apiKey = settings.getValue('apiKey');
+    const apiKey = this._getAndValidateApiKey(settings);
+    
+    // Создаем пустой объект apiSettings для настроек
+    const apiSettings = {};
+    
+    // Создаем вспомогательные функции для добавления настроек
+    const helpers = this._createSettingHelpers(apiSettings, settings, logger);
+    
+    // Добавляем все необходимые настройки
+    this._addBaseApiSettings(helpers);
+    this._addUserSpecificSettings(helpers);
+    this._addAdvancedSettings(helpers);
+    
+    // Логируем итоговые настройки для отладки
+    logger.info('Итоговые настройки API:', apiSettings);
+    
+    return { apiSettings, apiKey };
+  }
+  
+  /**
+   * Получает и проверяет API ключ из настроек
+   * @param {Object} settings - Сервис настроек
+   * @returns {string} - API ключ
+   * @throws {Error} - Если API ключ не найден
+   * @private
+   */
+  _getAndValidateApiKey(settings) {
+    const apiKey = settings.getValue(PageObjectApiRequestBuilderService.SETTINGS_KEYS.API_KEY);
     
     if (!apiKey) {
       throw new Error('API ключ не найден в настройках');
     }
     
-    // Создаем пустой объект apiSettings для настроек
-    const apiSettings = {};
-    
+    return apiKey;
+  }
+  
+  /**
+   * Создает вспомогательные функции для добавления настроек
+   * @param {Object} apiSettings - Объект настроек API
+   * @param {Object} settings - Сервис настроек
+   * @param {Object} logger - Сервис логирования
+   * @returns {Object} - Объект с вспомогательными функциями
+   * @private
+   */
+  _createSettingHelpers(apiSettings, settings, logger) {
     // Функция для добавления настройки
     const addSetting = (apiKey, value, transform = (x) => x) => {
       const transformedValue = transform(value);
@@ -85,30 +155,66 @@ class PageObjectApiRequestBuilderService {
       addSetting(apiKey, value, transform);
     };
     
-    // 1. Добавляем базовые параметры API
-    addSetting('model_id', 'scribe_v1');
-    addSettingFromSettings('language_code', 'languageCode');
+    return { addSetting, addSettingFromSettings };
+  }
+  
+  /**
+   * Добавляет базовые настройки API
+   * @param {Object} helpers - Вспомогательные функции
+   * @private
+   */
+  _addBaseApiSettings(helpers) {
+    const { addSetting, addSettingFromSettings } = helpers;
+    const { API_KEYS, SETTINGS_KEYS } = PageObjectApiRequestBuilderService;
     
-    // 2. Добавляем настройки из пользовательских настроек
-    addSettingFromSettings('tag_audio_events', 'tagAudioEvents'); // Значение уже boolean
+    // Модель распознавания (фиксированная)
+    addSetting(API_KEYS.MODEL_ID, 'scribe_v1');
+    
+    // Код языка из настроек
+    addSettingFromSettings(API_KEYS.LANGUAGE_CODE, SETTINGS_KEYS.LANGUAGE_CODE);
+  }
+  
+  /**
+   * Добавляет настройки из пользовательских предпочтений
+   * @param {Object} helpers - Вспомогательные функции
+   * @private
+   */
+  _addUserSpecificSettings(helpers) {
+    const { addSettingFromSettings } = helpers;
+    const { API_KEYS, SETTINGS_KEYS } = PageObjectApiRequestBuilderService;
+    
+    // Тегирование аудио-событий (значение уже boolean)
+    addSettingFromSettings(API_KEYS.TAG_AUDIO_EVENTS, SETTINGS_KEYS.TAG_AUDIO_EVENTS);
     
     // Проверяем значение granularity - не отправляем, если 'none'
-    addSettingFromSettings('timestamps_granularity', 'timestampsGranularity', v => v === 'none' ? null : v);
-    
-    addSettingFromSettings('diarize', 'diarize'); // Значение уже boolean
-    
-    // Используем числовое значение numSpeakers как есть
-    addSettingFromSettings('num_speakers', 'numSpeakers');
-    
-    // Добавляем ключевые слова
-    addSettingFromSettings('biased_keywords', 'biasedKeywords', keywords => 
-      Array.isArray(keywords) && keywords.length ? keywords : null
+    addSettingFromSettings(
+      API_KEYS.TIMESTAMPS_GRANULARITY, 
+      SETTINGS_KEYS.TIMESTAMPS_GRANULARITY, 
+      v => v === 'none' ? null : v
     );
+  }
+  
+  /**
+   * Добавляет расширенные настройки для особых случаев
+   * @param {Object} helpers - Вспомогательные функции
+   * @private
+   */
+  _addAdvancedSettings(helpers) {
+    const { addSettingFromSettings } = helpers;
+    const { API_KEYS, SETTINGS_KEYS } = PageObjectApiRequestBuilderService;
     
-    // 4. Логируем итоговые настройки для отладки
-    logger.info('Итоговые настройки API:', apiSettings);
+    // Диаризация (определение говорящих)
+    addSettingFromSettings(API_KEYS.DIARIZE, SETTINGS_KEYS.DIARIZE);
     
-    return { apiSettings, apiKey };
+    // Количество говорящих
+    addSettingFromSettings(API_KEYS.NUM_SPEAKERS, SETTINGS_KEYS.NUM_SPEAKERS);
+    
+    // Ключевые слова (отправляем только если массив не пустой)
+    addSettingFromSettings(
+      API_KEYS.BIASED_KEYWORDS, 
+      SETTINGS_KEYS.BIASED_KEYWORDS, 
+      keywords => Array.isArray(keywords) && keywords.length ? keywords : null
+    );
   }
 }
 
