@@ -1,14 +1,37 @@
 /**
- * Сервис для работы с API распознавания речи
+ * Сервис для работы с API распознавания речи ElevenLabs
+ * 
+ * Отвечает за непосредственное взаимодействие с Speech-to-Text API,
+ * включая отправку аудиоданных, обработку ответов и обработку ошибок.
+ * Использует apiRequestBuilder для подготовки параметров запроса.
+ * 
+ * @see https://docs.elevenlabs.io/api-reference/speech-to-text
  */
 class PageObjectSpeechApiService {
+  // Константы для работы с API
+  static API = {
+    ENDPOINT: 'https://api.elevenlabs.io/v1/speech-to-text',
+    HEADERS: {
+      ACCEPT: 'Accept',
+      API_KEY: 'xi-api-key'
+    },
+    METHOD: 'POST',
+    CONTENT_TYPE: 'application/json'
+  };
+  
+  /**
+   * Создает экземпляр сервиса
+   * @param {PageObject} pageObject - Центральный объект PageObject
+   */
   constructor(pageObject) {
     this._page = pageObject;
-    this._apiEndpoint = 'https://api.elevenlabs.io/v1/speech-to-text';
+    this._apiEndpoint = PageObjectSpeechApiService.API.ENDPOINT;
   }
 
   /**
    * Инициализация сервиса
+   * Проверяет наличие необходимых зависимостей
+   * @throws {Error} Если отсутствует сервис apiRequestBuilder
    */
   async init() {
     if (!this._page.apiRequestBuilder) {
@@ -18,8 +41,14 @@ class PageObjectSpeechApiService {
 
   /**
    * Отправка аудио в API ElevenLabs для распознавания
+   * 
+   * Этот метод выполняет полный цикл распознавания речи:
+   * 1. Формирует и отправляет запрос к API
+   * 2. Обрабатывает успешный ответ или ошибки
+   * 3. Возвращает результат в унифицированном формате
+   * 
    * @param {Blob} audioBlob - Аудиоданные для распознавания
-   * @returns {Promise<{result: string, ok: boolean}>} - Результат распознавания или ошибка
+   * @returns {Promise<{result: string, ok: boolean}>} - Результат распознавания или сообщение об ошибке
    */
   async sendToElevenLabsAPI(audioBlob) {
     try {
@@ -43,24 +72,34 @@ class PageObjectSpeechApiService {
 
   /**
    * Отправляет запрос к API ElevenLabs
+   * 
+   * Использует apiRequestBuilder для создания FormData и получения API ключа,
+   * затем выполняет HTTP-запрос к endpoint API.
+   * 
+   * @param {Blob} audioBlob - Аудиоданные для отправки
+   * @returns {Promise<Response>} - Promise с ответом HTTP-запроса
    * @private
    */
   async _sendRequest(audioBlob) {
     const { apiRequestBuilder } = this._page;
+    const { API } = PageObjectSpeechApiService;
     const { formData, apiKey } = await apiRequestBuilder.createElevenLabsRequestData(audioBlob);
     
     return fetch(this._apiEndpoint, {
-      method: 'POST',
+      method: API.METHOD,
       headers: {
-        'Accept': 'application/json',
-        'xi-api-key': apiKey
+        [API.HEADERS.ACCEPT]: API.CONTENT_TYPE,
+        [API.HEADERS.API_KEY]: apiKey
       },
       body: formData
     });
   }
 
   /**
-   * Извлекает распознанный текст из ответа API
+   * Извлекает распознанный текст из успешного ответа API
+   * 
+   * @param {Object} result - Разобранный JSON-ответ от API
+   * @returns {string} - Распознанный и обработанный текст
    * @private
    */
   _extractRecognizedText(result) {
@@ -72,7 +111,13 @@ class PageObjectSpeechApiService {
   }
 
   /**
-   * Форматирует сообщение об ошибке
+   * Форматирует сообщение об ошибке для пользователя
+   * 
+   * Используется при сетевых ошибках и других исключениях,
+   * которые могут возникнуть при отправке запроса.
+   * 
+   * @param {Error} error - Объект ошибки
+   * @returns {string} - Отформатированное сообщение об ошибке
    * @private
    */
   _formatErrorMessage(error) {
@@ -84,6 +129,14 @@ class PageObjectSpeechApiService {
 
   /**
    * Обрабатывает ошибки API ElevenLabs
+   * 
+   * Реализует многоуровневую стратегию обработки ошибок:
+   * 1. Сначала пытается получить локализованное сообщение по коду из detail.status
+   * 2. Затем пытается получить локализованное сообщение по HTTP статус-коду
+   * 3. В крайнем случае возвращает общее сообщение об ошибке
+   * 
+   * @param {Response} response - Ответ HTTP с ошибкой (не 2xx)
+   * @returns {Promise<string>} - Локализованное сообщение об ошибке
    * @private
    */
   async _handleApiError(response) {
