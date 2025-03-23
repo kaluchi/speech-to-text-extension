@@ -126,9 +126,10 @@ class PageObjectKeyboardService {
    * @private
    */
   _startRecording() {
-    this._page.logger.info("Обнаружено двойное нажатие целевой клавиши, начинаем запись");
+    const { logger, recorder } = this._page;
+    logger.info("Обнаружено двойное нажатие целевой клавиши, начинаем запись");
     this._state = 'recording';
-    this._page.recorder.startRecording();
+    recorder.startRecording();
   }
   
   /**
@@ -136,9 +137,10 @@ class PageObjectKeyboardService {
    * @private
    */
   _stopRecording() {
-    this._page.logger.info("Останавливаем запись");
+    const { logger, recorder } = this._page;
+    logger.info("Останавливаем запись");
     this._state = 'idle';
-    this._page.recorder.stopRecording();
+    recorder.stopRecording();
   }
   
   /**

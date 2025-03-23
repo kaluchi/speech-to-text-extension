@@ -108,11 +108,12 @@ class PageObjectMediaService {
       // Логирование устройств
       logger.info('=== Доступные аудио устройства ===');
       devices.forEach((device, index) => {
+        const { deviceId, label, groupId, kind } = device;
         logger.info(`Устройство ${index + 1}:`, {
-          id: device.deviceId,
-          label: device.label,
-          groupId: device.groupId,
-          kind: device.kind
+          id: deviceId,
+          label,
+          groupId,
+          kind
         });
       });
       
@@ -397,16 +398,26 @@ class PageObjectMediaService {
     
     const audioTrack = this._stream.getAudioTracks()[0];
     if (audioTrack) {
-      const trackSettings = audioTrack.getSettings();
+      const { 
+        deviceId, 
+        groupId, 
+        sampleRate, 
+        channelCount, 
+        autoGainControl, 
+        echoCancellation, 
+        noiseSuppression, 
+        latency 
+      } = audioTrack.getSettings();
+      
       logger.debug(`Параметры аудиопотока (${sourceType}):`, {
-        deviceId: trackSettings.deviceId,
-        groupId: trackSettings.groupId,
-        sampleRate: trackSettings.sampleRate,
-        channelCount: trackSettings.channelCount,
-        autoGainControl: trackSettings.autoGainControl,
-        echoCancellation: trackSettings.echoCancellation,
-        noiseSuppression: trackSettings.noiseSuppression,
-        latency: trackSettings.latency
+        deviceId,
+        groupId,
+        sampleRate,
+        channelCount,
+        autoGainControl,
+        echoCancellation,
+        noiseSuppression,
+        latency
       });
     }
   }
