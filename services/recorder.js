@@ -30,9 +30,7 @@ class PageObjectRecorderService {
         logger.warn('Запись отменена из-за отсутствия API ключа');
         
         // Скрываем маску, если она была показана
-        if (settings.getValue('enableRecordingMask')) {
-          ui.hideMask();
-        }
+        settings.getValue('enableRecordingMask') && ui.hideMask();
         return;
       }
       
@@ -62,9 +60,7 @@ class PageObjectRecorderService {
           media.stopAudioTracks();
           
           // Скрываем маску, если она была показана
-          if (settings.getValue('enableRecordingMask')) {
-            ui.hideMask();
-          }
+          settings.getValue('enableRecordingMask') && ui.hideMask();
           return;
         }
         
@@ -95,9 +91,7 @@ class PageObjectRecorderService {
         logger.error("Ошибка при получении аудиопотока:", error);
         
         // Скрываем маску, если она была показана
-        if (settings.getValue('enableRecordingMask')) {
-          ui.hideMask();
-        }
+        settings.getValue('enableRecordingMask') && ui.hideMask();
         
         // Отменяем регистрацию обработчика blur
         removeBlurHandler();
@@ -107,9 +101,7 @@ class PageObjectRecorderService {
       logger.error("Ошибка при запуске записи:", err);
       
       // Скрываем маску, если она была показана
-      if (settings.getValue('enableRecordingMask')) {
-        ui.hideMask();
-      }
+      settings.getValue('enableRecordingMask') && ui.hideMask();
     }
   }
   
@@ -121,9 +113,7 @@ class PageObjectRecorderService {
     logger.info("Останавливаем запись...");
     
     // Скрываем маску, только если она показывается
-    if (settings.getValue('enableRecordingMask')) {
-      ui.hideMask();
-    }
+    settings.getValue('enableRecordingMask') && ui.hideMask();
     
     if (media.isInitializing()) {
       logger.info("Инициализация записи в процессе, ожидаем безопасной остановки...");
