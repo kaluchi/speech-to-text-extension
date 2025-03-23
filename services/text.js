@@ -2,6 +2,27 @@
  * Сервис для работы с текстом и вставки в различные элементы
  */
 class PageObjectTextService {
+  /**
+   * Константы типов элементов для вставки
+   */
+  static ELEMENT_TYPE = {
+    CONTENT_EDITABLE: 'contentEditable',
+    INPUT: 'INPUT',
+    TEXTAREA: 'TEXTAREA'
+  };
+  
+  /**
+   * События для генерации при изменении элементов
+   */
+  static EVENT = {
+    INPUT: 'input',
+    CHANGE: 'change'
+  };
+  
+  /**
+   * Создает экземпляр сервиса для работы с текстом
+   * @param {PageObject} pageObject - Центральный объект PageObject
+   */
   constructor(pageObject) {
     this._page = pageObject;
     this._restrictedDomains = [
@@ -26,31 +47,14 @@ class PageObjectTextService {
    * @returns {Promise<boolean>} - true, если вставка прошла успешно
    */
   async insertText(text = '') {
-    const { logger, clipboard, dom } = this._page;
+    const { logger, clipboard } = this._page;
     
     try {
-      // Диагностика активного элемента
-      const activeElement = dom.getActiveElement();
-      logger.info(
-        'Попытка вставки текста. Активный элемент:', 
-        activeElement?.tagName || 'отсутствует', 
-        'contentEditable:', activeElement?.isContentEditable || false
-      );
+      // Проверка и получение активного элемента
+      const activeElement = this._getAndVerifyActiveElement();
       
-      // Проверка ограничений по домену
-      if (this._isPageRestricted(window.location.href)) {
-        logger.info('Вставка текста запрещена на данном домене', window.location.href);
-        await clipboard.write(text);
-        return false;
-      }
-      
-      // Проверка активного элемента
-      const body = dom.getBody();
-      if (!activeElement || activeElement === body || !dom.isEditableElement(activeElement)) {
-        logger.info('Активный элемент не является редактируемым, причина:', 
-          !activeElement ? 'отсутствует' : 
-          (activeElement === body ? 'это body' : 'не редактируемый элемент'));
-        logger.info('Активный элемент не является редактируемым, копируем в буфер обмена');
+      // Если нет подходящего элемента или страница ограничена, копируем в буфер
+      if (!activeElement) {
         await clipboard.write(text);
         return false;
       }
@@ -58,34 +62,125 @@ class PageObjectTextService {
       // Подготавливаем текст перед вставкой
       const preparedText = this._prepareTextForInsertion(text);
       
-      // Вставляем в зависимости от типа элемента
-      if (activeElement.isContentEditable) {
-        this._insertIntoContentEditable(activeElement, preparedText);
-      } else if (activeElement.tagName === 'TEXTAREA' || activeElement.tagName === 'INPUT') {
-        this._insertIntoFormField(activeElement, preparedText);
-      } else {
-        // Неизвестный тип элемента
-        logger.warn('Неизвестный тип редактируемого элемента:', activeElement.tagName);
-        await clipboard.write(text);
-        return false;
-      }
+      // Вставляем текст в активный элемент
+      this._insertIntoElement(activeElement, preparedText);
       
-      // Отправляем событие изменения
+      // Генерация событий изменения
       this._dispatchChangeEvent(activeElement);
       
       return true;
     } catch (error) {
-      logger.error('Ошибка при вставке текста:', error);
-      
-      // В случае ошибки пытаемся скопировать в буфер обмена
-      try {
-        await clipboard.write(text);
-      } catch (clipboardError) {
-        logger.error('Ошибка при копировании в буфер обмена:', clipboardError);
-      }
-      
+      // Обработка ошибок
+      return this._handleInsertionError(error, text);
+    }
+  }
+  
+  /**
+   * Получает и проверяет активный элемент
+   * @returns {HTMLElement|null} - Активный элемент или null если недоступен
+   * @private
+   */
+  _getAndVerifyActiveElement() {
+    const { logger, dom } = this._page;
+    
+    // Получаем активный элемент
+    const activeElement = dom.getActiveElement();
+    
+    // Логирование информации об активном элементе
+    this._logActiveElementInfo(activeElement);
+    
+    // Проверка ограничений по домену
+    if (this._isPageRestricted(window.location.href)) {
+      logger.info('Вставка текста запрещена на данном домене', window.location.href);
+      return null;
+    }
+    
+    // Проверка на редактируемость элемента
+    if (!this._isEditableActiveElement(activeElement)) {
+      return null;
+    }
+    
+    return activeElement;
+  }
+  
+  /**
+   * Логирует информацию об активном элементе
+   * @param {HTMLElement|null} activeElement - Активный элемент
+   * @private
+   */
+  _logActiveElementInfo(activeElement) {
+    const { logger } = this._page;
+    
+    logger.info(
+      'Попытка вставки текста. Активный элемент:', 
+      activeElement?.tagName || 'отсутствует', 
+      'contentEditable:', activeElement?.isContentEditable || false
+    );
+  }
+  
+  /**
+   * Проверяет, является ли активный элемент редактируемым
+   * @param {HTMLElement|null} activeElement - Активный элемент для проверки
+   * @returns {boolean} - true, если элемент можно редактировать
+   * @private
+   */
+  _isEditableActiveElement(activeElement) {
+    const { logger, dom } = this._page;
+    const body = dom.getBody();
+    
+    if (!activeElement || activeElement === body || !dom.isEditableElement(activeElement)) {
+      logger.info('Активный элемент не является редактируемым, причина:', 
+        !activeElement ? 'отсутствует' : 
+        (activeElement === body ? 'это body' : 'не редактируемый элемент'));
+      logger.info('Активный элемент не является редактируемым, копируем в буфер обмена');
       return false;
     }
+    
+    return true;
+  }
+  
+  /**
+   * Вставляет текст в активный элемент в зависимости от его типа
+   * @param {HTMLElement} element - Элемент для вставки
+   * @param {string} text - Подготовленный текст
+   * @throws {Error} - При ошибке вставки
+   * @private
+   */
+  _insertIntoElement(element, text) {
+    const { logger } = this._page;
+    const { ELEMENT_TYPE } = PageObjectTextService;
+    
+    if (element.isContentEditable) {
+      this._insertIntoContentEditable(element, text);
+    } else if (element.tagName === ELEMENT_TYPE.TEXTAREA || element.tagName === ELEMENT_TYPE.INPUT) {
+      this._insertIntoFormField(element, text);
+    } else {
+      // Неизвестный тип элемента
+      logger.warn('Неизвестный тип редактируемого элемента:', element.tagName);
+      throw new Error('Неизвестный тип элемента');
+    }
+  }
+  
+  /**
+   * Обрабатывает ошибки вставки текста
+   * @param {Error} error - Возникшая ошибка
+   * @param {string} text - Текст, который пытались вставить
+   * @returns {boolean} - Всегда false (ошибка)
+   * @private
+   */
+  async _handleInsertionError(error, text) {
+    const { logger, clipboard } = this._page;
+    
+    logger.error('Ошибка при вставке текста:', error);
+    
+    // В случае ошибки пытаемся скопировать в буфер обмена
+    try {
+      await clipboard.write(text);
+    } catch (clipboardError) {
+      logger.error('Ошибка при копировании в буфер обмена:', clipboardError);
+    }
+    
+    return false;
   }
 
   /**
@@ -108,26 +203,43 @@ class PageObjectTextService {
     // Удаляем начальные и конечные пробелы
     let trimmedText = text.trim();
     
-    // Проверяем, нужно ли добавить пробел в начале
-    const activeElement = this._page.dom.getActiveElement();
-    if (activeElement && this._shouldAddLeadingSpace(activeElement)) {
-      trimmedText = ' ' + trimmedText;
-    }
-    
-    // Проверяем, нужно ли добавить пробел в конце
-    if (activeElement && this._shouldAddTrailingSpace(activeElement)) {
-      trimmedText = trimmedText + ' ';
-    }
-    
-    // Проверяем, нужно ли добавить точку в конце
-    if (this._shouldAddPeriod(trimmedText)) {
-      trimmedText = trimmedText + '.';
-    }
+    // Форматирование текста
+    trimmedText = this._formatSpacingAndPunctuation(trimmedText);
     
     // Делаем первую букву заглавной, если это предложение
     trimmedText = this._capitalizeFirstLetter(trimmedText);
     
     return trimmedText;
+  }
+  
+  /**
+   * Форматирует пробелы и пунктуацию в тексте
+   * @param {string} text - Исходный текст
+   * @returns {string} - Отформатированный текст
+   * @private
+   */
+  _formatSpacingAndPunctuation(text) {
+    const activeElement = this._page.dom.getActiveElement();
+    
+    // Добавление пробелов при необходимости
+    if (activeElement) {
+      // Пробел в начале, если нужен
+      if (this._shouldAddLeadingSpace(activeElement)) {
+        text = ' ' + text;
+      }
+      
+      // Пробел в конце, если нужен
+      if (this._shouldAddTrailingSpace(activeElement)) {
+        text = text + ' ';
+      }
+    }
+    
+    // Добавление точки в конце, если нужно
+    if (this._shouldAddPeriod(text)) {
+      text = text + '.';
+    }
+    
+    return text;
   }
 
   /**
@@ -211,9 +323,11 @@ class PageObjectTextService {
    * @private
    */
   _getCurrentText(element) {
+    const { ELEMENT_TYPE } = PageObjectTextService;
+    
     if (element.isContentEditable) {
       return element.textContent || '';
-    } else if (element.tagName === 'TEXTAREA' || element.tagName === 'INPUT') {
+    } else if (element.tagName === ELEMENT_TYPE.TEXTAREA || element.tagName === ELEMENT_TYPE.INPUT) {
       return element.value || '';
     }
     return '';
@@ -227,8 +341,9 @@ class PageObjectTextService {
    */
   _getCursorPosition(element) {
     const { dom } = this._page;
+    const { ELEMENT_TYPE } = PageObjectTextService;
     
-    if (element.tagName === 'TEXTAREA' || element.tagName === 'INPUT') {
+    if (element.tagName === ELEMENT_TYPE.TEXTAREA || element.tagName === ELEMENT_TYPE.INPUT) {
       return element.selectionStart || 0;
     } else if (element.isContentEditable) {
       const selection = dom.getSelection();
@@ -344,15 +459,16 @@ class PageObjectTextService {
    */
   _dispatchChangeEvent(element) {
     const { logger, dom } = this._page;
+    const { EVENT, ELEMENT_TYPE } = PageObjectTextService;
     
     try {
       // Для input и textarea
-      if (element.tagName === 'INPUT' || element.tagName === 'TEXTAREA') {
-        dom.dispatchEvent(element, 'input', true);
-        dom.dispatchEvent(element, 'change', true);
+      if (element.tagName === ELEMENT_TYPE.INPUT || element.tagName === ELEMENT_TYPE.TEXTAREA) {
+        dom.dispatchEvent(element, EVENT.INPUT, true);
+        dom.dispatchEvent(element, EVENT.CHANGE, true);
       } else if (element.isContentEditable) {
         // Для contenteditable
-        dom.dispatchEvent(element, 'input', true);
+        dom.dispatchEvent(element, EVENT.INPUT, true);
       }
     } catch (error) {
       logger.warn('Ошибка при генерации события изменения:', error);
