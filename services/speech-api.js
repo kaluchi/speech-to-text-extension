@@ -99,25 +99,34 @@ class PageObjectSpeechApiService {
       error: errorData
     });
     
-    // 1. Приоритет: локализованный текст по коду статуса из detail.status
-    if (errorData && errorData.detail && errorData.detail.status) {
-      const localizedMessage = i18n.getTranslation(errorData.detail.status);
-      if (localizedMessage !== errorData.detail.status) { // Проверка существования перевода
-        return localizedMessage;
-      } else {
-        return errorData.detail.message;
-      }
-    }
+    // Стратегии обработки ошибок в порядке приоритета
+    const errorHandlingStrategies = [
+      // Стратегия 1: Использовать код статуса из detail.status
+      () => {
+        if (errorData?.detail?.status) {
+          const localizedMessage = i18n.getTranslation(errorData.detail.status);
+          return localizedMessage !== errorData.detail.status ? 
+            localizedMessage : errorData.detail.message;
+        }
+        return null;
+      },
+      
+      // Стратегия 2: Использовать HTTP статус
+      () => {
+        const errorKey = `api_error_${response.status}`;
+        const localizedHttpError = i18n.getTranslation(errorKey);
+        return localizedHttpError !== errorKey ? localizedHttpError : null;
+      },
+      
+      // Стратегия 3: Вернуть общую ошибку
+      () => i18n.getTranslation('api_error_unknown')
+    ];
     
-    // 2. Приоритет: локализованное сообщение по HTTP-статусу
-    const errorKey = `api_error_${response.status}`;
-    const localizedHttpError = i18n.getTranslation(errorKey);
-    if (localizedHttpError !== errorKey) {
-      return localizedHttpError;
+    // Применяем стратегии последовательно
+    for (const strategy of errorHandlingStrategies) {
+      const result = strategy();
+      if (result) return result;
     }
-    
-    // Если ничего не подошло, возвращаем общее сообщение об ошибке
-    return i18n.getTranslation('api_error_unknown');
   }
 }
 
