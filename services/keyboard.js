@@ -73,14 +73,17 @@ class PageObjectKeyboardService {
     const currentTime = performance.now();
     const { STATE } = PageObjectKeyboardService;
     
-    // Если нажата не целевая клавиша и мы в процессе записи, останавливаем запись
-    if (!this._isTargetKey(event) && this._state === STATE.RECORDING) {
-      this._stopRecording();
+    // Проверяем, целевая ли это клавиша
+    const isTarget = this._isTargetKey(event);
+    
+    // Если не целевая клавиша
+    if (!isTarget) {
+      // Если мы в процессе записи, останавливаем запись
+      if (this._state === STATE.RECORDING) {
+        this._stopRecording();
+      }
       return;
     }
-    
-    // Если нажата не целевая клавиша, игнорируем
-    if (!this._isTargetKey(event)) return;
     
     logger.debug(`Нажата целевая клавиша: ${event.key}, состояние: ${this._state}`);
     

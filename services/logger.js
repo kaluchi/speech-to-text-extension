@@ -110,24 +110,10 @@ class PageObjectLoggerService {
    * @param {string} level - Уровень логирования
    * @param  {...any} args - Аргументы для логирования
    */
-  _log(level, ...args) {
+  _log(level = 'info', ...args) {
     if (this._shouldLog(level)) {
       const prefix = `${this._prefix} [${level.toUpperCase()}]`;
-      
-      switch (level) {
-        case 'debug':
-          console.debug(prefix, ...args);
-          break;
-        case 'info':
-          console.info(prefix, ...args);
-          break;
-        case 'warn':
-          console.warn(prefix, ...args);
-          break;
-        case 'error':
-          console.error(prefix, ...args);
-          break;
-      }
+      console[level](prefix, ...args);
     }
   }
 

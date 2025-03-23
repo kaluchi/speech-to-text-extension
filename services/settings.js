@@ -143,16 +143,11 @@ class PageObjectSettingsService {
     const { logger, chrome } = this._page;
     const apiKey = this.getValue('apiKey');
     
-    if (!apiKey) {
-      logger.info('API ключ не найден');
-      
-      // Открываем страницу настроек вместо показа уведомления
-      chrome.openOptionsPage();
-      
-      return false;
-    }
+    if (apiKey) return true;
     
-    return true;
+    logger.info('API ключ не найден');
+    chrome.openOptionsPage();
+    return false;
   }
 
 
@@ -167,13 +162,13 @@ class PageObjectSettingsService {
     chrome.storage.onChanged.addListener((changes, areaName) => {
       if (areaName !== 'sync') return;
       
-      Object.entries(changes).forEach(([key, { newValue, oldValue }]) => {
-        if (key in this._settings && this._settings[key] !== newValue) {
+      Object.entries(changes)
+        .filter(([key, { newValue }]) => key in this._settings && this._settings[key] !== newValue)
+        .forEach(([key, { newValue, oldValue }]) => {
           this._settings[key] = newValue;
           logger.debug(`Настройка ${key} изменена извне:`, newValue);
           this._notifyChangeHandlers(key, newValue, oldValue);
-        }
-      });
+        });
     });
   }
 

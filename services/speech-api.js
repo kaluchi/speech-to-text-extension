@@ -53,14 +53,16 @@ class PageObjectSpeechApiService {
       if (response.ok) {
         const result = await this._extractRecognizedText(await response.json());
         return { result, ok: true };
-      } else {
-        const errorMessage = await this._handleApiError(response);
-        return { result: errorMessage, ok: false };
-      }
+      } 
+      
+      const errorMessage = await this._handleApiError(response);
+      return { result: errorMessage, ok: false };
     } catch (error) {
       // Обрабатываем любые ошибки
-      const errorMessage = this._formatErrorMessage(error);
-      return { result: errorMessage, ok: false };
+      return { 
+        result: this._formatErrorMessage(error), 
+        ok: false 
+      };
     }
   }
 
@@ -75,9 +77,7 @@ class PageObjectSpeechApiService {
    * @private
    */
   async _sendRequest(audioBlob) {
-    const { apiRequestBuilder } = this._page;
-
-    const { formData, apiKey } = await apiRequestBuilder.createElevenLabsRequestData(audioBlob);
+    const { formData, apiKey } = await this._page.apiRequestBuilder.createElevenLabsRequestData(audioBlob);
     
     return fetch(this._apiEndpoint, {
       method: 'POST',
@@ -152,10 +152,9 @@ class PageObjectSpeechApiService {
       if (errorData?.detail?.status) {
         const localizedMessage = i18n.getTranslation(errorData.detail.status);
         // Возвращаем локализованное сообщение, если оно найдено, или сообщение из API
-        if (localizedMessage !== errorData.detail.status) {
-          return localizedMessage;
-        }
-        return errorData.detail.message;
+        return localizedMessage !== errorData.detail.status 
+          ? localizedMessage 
+          : errorData.detail.message;
       }
       
       // Стратегия 2: Использовать HTTP статус
