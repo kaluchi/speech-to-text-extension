@@ -2,18 +2,37 @@
  * Сервис для обработки клавиатурных событий и управления двойными нажатиями
  */
 class PageObjectKeyboardService {
+  // Константы состояний клавиатуры
+  static STATE = {
+    IDLE: 'idle',
+    AWAITING_SECOND_PRESS: 'awaitingSecondPress', 
+    RECORDING: 'recording'
+  };
+  
+  // Константы событий клавиатуры
+  static EVENT = {
+    KEYDOWN: 'keydown',
+    KEYUP: 'keyup'
+  };
+  
+  // Константы клавиш
+  static KEY = {
+    META: 'Meta',
+    CONTROL: 'Control'
+  };
+  
   constructor(pageObject) {
     this._page = pageObject;
     
     // Определяем платформозависимую целевую клавишу (Ctrl для Windows/Linux, Cmd для Mac)
     this._isMac = navigator.platform.toLowerCase().includes("mac");
-    this._targetKey = this._isMac ? "Meta" : "Control";
+    this._targetKey = this._isMac ? PageObjectKeyboardService.KEY.META : PageObjectKeyboardService.KEY.CONTROL;
     
     // Настройки
     this._doublePressThreshold = 300; // Максимальное время между нажатиями для двойного клика (мс)
     
     // Состояние записи
-    this._state = 'idle'; // idle, awaitingSecondPress, recording
+    this._state = PageObjectKeyboardService.STATE.IDLE;
     this._lastPressTime = 0;
     this._lastReleaseTime = 0;
     this._timeoutId = null;
@@ -41,8 +60,8 @@ class PageObjectKeyboardService {
     logger.info(`Настройка обработчиков клавиши ${this._targetKey} для управления записью`);
     
     // Подписка на клавиатурные события
-    dom.addDocumentEventListener('keydown', this._handleKeyDown);
-    dom.addDocumentEventListener('keyup', this._handleKeyUp);
+    dom.addDocumentEventListener(PageObjectKeyboardService.EVENT.KEYDOWN, this._handleKeyDown);
+    dom.addDocumentEventListener(PageObjectKeyboardService.EVENT.KEYUP, this._handleKeyUp);
     
     // Ожидаем инициализации контроллера записи
     await this._page._initializeService('recorder');
@@ -56,9 +75,10 @@ class PageObjectKeyboardService {
   _handleKeyDown(event) {
     const { logger } = this._page;
     const currentTime = performance.now();
+    const { STATE } = PageObjectKeyboardService;
     
     // Если нажата не целевая клавиша и мы в процессе записи, останавливаем запись
-    if (!this._isTargetKey(event) && this._state === 'recording') {
+    if (!this._isTargetKey(event) && this._state === STATE.RECORDING) {
       this._stopRecording();
       return;
     }
@@ -70,12 +90,12 @@ class PageObjectKeyboardService {
     
     // Обрабатываем в зависимости от текущего состояния
     switch (this._state) {
-      case 'idle':
+      case STATE.IDLE:
         this._lastPressTime = currentTime;
-        this._state = 'awaitingSecondPress';
+        this._state = STATE.AWAITING_SECOND_PRESS;
         break;
         
-      case 'awaitingSecondPress':
+      case STATE.AWAITING_SECOND_PRESS:
         if (currentTime - this._lastReleaseTime <= this._doublePressThreshold) {
           this._startRecording();
         } else {
@@ -97,25 +117,26 @@ class PageObjectKeyboardService {
     
     const { logger } = this._page;
     const currentTime = performance.now();
+    const { STATE } = PageObjectKeyboardService;
     
     logger.debug(`Отпущена целевая клавиша: ${event.key}, состояние: ${this._state}`);
     
     // Обрабатываем в зависимости от текущего состояния
     switch (this._state) {
-      case 'awaitingSecondPress':
+      case STATE.AWAITING_SECOND_PRESS:
         this._lastReleaseTime = currentTime;
         
         // Устанавливаем таймаут для ожидания второго нажатия
         this._clearTimeout();
         this._timeoutId = setTimeout(() => {
-          if (this._state === 'awaitingSecondPress') {
+          if (this._state === STATE.AWAITING_SECOND_PRESS) {
             logger.debug('Таймаут ожидания второго нажатия, возврат в idle');
-            this._state = 'idle';
+            this._state = STATE.IDLE;
           }
         }, this._doublePressThreshold);
         break;
         
-      case 'recording':
+      case STATE.RECORDING:
         this._stopRecording();
         break;
     }
@@ -128,7 +149,7 @@ class PageObjectKeyboardService {
   _startRecording() {
     const { logger, recorder } = this._page;
     logger.info("Обнаружено двойное нажатие целевой клавиши, начинаем запись");
-    this._state = 'recording';
+    this._state = PageObjectKeyboardService.STATE.RECORDING;
     recorder.startRecording();
   }
   
@@ -139,7 +160,7 @@ class PageObjectKeyboardService {
   _stopRecording() {
     const { logger, recorder } = this._page;
     logger.info("Останавливаем запись");
-    this._state = 'idle';
+    this._state = PageObjectKeyboardService.STATE.IDLE;
     recorder.stopRecording();
   }
   
