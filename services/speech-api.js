@@ -134,63 +134,45 @@ class PageObjectSpeechApiService {
    * @private
    */
   async _handleApiError(response) {
-    const { i18n } = this._page;
-    // Получаем данные об ошибке
-    const errorData = await response.json();
-
-    // Логгирование ошибки
-    this._page.logger.info('ElevenLabs API error', { 
-      status: response.status,
-      statusText: response.statusText,
-      url: response.url,
-      error: errorData
-    });
+    const { logger, i18n } = this._page;
     
-    // Стратегии обработки ошибок в порядке приоритета
-    const errorHandlingStrategies = this._getErrorHandlingStrategies(errorData, i18n, response);
-    
-    // Применяем стратегии последовательно
-    for (const strategy of errorHandlingStrategies) {
-      const result = strategy();
-      if (result) return result;
-    }
-  }
+    try {
+      // Получаем данные об ошибке
+      const errorData = await response.json();
 
-  /**
-   * Генерирует массив стратегий обработки ошибок на основе предоставленных данных об ошибке,
-   * экземпляра интернационализации (i18n) и HTTP-ответа.
-   *
-   * @param {Object} errorData - Объект данных об ошибке, содержащий подробности об ошибке.
-   * @param {Object} errorData.detail - Подробная информация об ошибке.
-   * @param {string} errorData.detail.status - Код статуса ошибки.
-   * @param {string} errorData.detail.message - Сообщение, связанное с ошибкой.
-   * @param {Object} i18n - Экземпляр интернационализации, используемый для перевода сообщений об ошибках.
-   * @param {Object} response - Объект HTTP-ответа.
-   * @param {number} response.status - Код статуса HTTP-ответа.
-   * @returns {Array<Function>} Массив функций, представляющих различные стратегии обработки ошибок.
-   */
-  _getErrorHandlingStrategies(errorData, i18n, response) {
-    return [
-      () => {
-        if (errorData?.detail?.status) {
-          const localizedMessage = i18n.getTranslation(errorData.detail.status);
-          return localizedMessage !== errorData.detail.status ?
-            localizedMessage : errorData.detail.message;
+      // Логгирование ошибки
+      logger.info('ElevenLabs API error', { 
+        status: response.status,
+        statusText: response.statusText,
+        url: response.url,
+        error: errorData
+      });
+      
+      // Стратегия 1: Использовать код статуса из detail.status
+      if (errorData?.detail?.status) {
+        const localizedMessage = i18n.getTranslation(errorData.detail.status);
+        // Возвращаем локализованное сообщение, если оно найдено, или сообщение из API
+        if (localizedMessage !== errorData.detail.status) {
+          return localizedMessage;
         }
-        return null;
-      },
-
+        return errorData.detail.message;
+      }
+      
       // Стратегия 2: Использовать HTTP статус
-      () => {
-        const errorKey = `api_error_${response.status}`;
-        const localizedHttpError = i18n.getTranslation(errorKey);
-        return localizedHttpError !== errorKey ? localizedHttpError : null;
-      },
-
-      // Стратегия 3: Вернуть общую ошибку
-      () => i18n.getTranslation('api_error_unknown')
-    ];
+      const errorKey = `api_error_${response.status}`;
+      const localizedHttpError = i18n.getTranslation(errorKey);
+      if (localizedHttpError !== errorKey) {
+        return localizedHttpError;
+      }
+    } catch (error) {
+      logger.error('Ошибка при обработке JSON из ответа с ошибкой:', error);
+    }
+    
+    // Стратегия 3: Общая ошибка
+    return i18n.getTranslation('api_error_unknown');
   }
+
+
 }
 
 // Экспортируем класс в глобальную область видимости

@@ -126,17 +126,18 @@ class PageObjectTextService {
    */
   _isEditableActiveElement(activeElement) {
     const { logger, dom } = this._page;
-    const body = dom.getBody();
     
-    if (!activeElement || activeElement === body || !dom.isEditableElement(activeElement)) {
-      logger.info('Активный элемент не является редактируемым, причина:', 
-        !activeElement ? 'отсутствует' : 
-        (activeElement === body ? 'это body' : 'не редактируемый элемент'));
-      logger.info('Активный элемент не является редактируемым, копируем в буфер обмена');
-      return false;
+    // Проверяем доступность элемента, что это не body и что он редактируемый
+    const isEditable = activeElement && activeElement !== dom.getBody() && dom.isEditableElement(activeElement);
+    
+    if (!isEditable) {
+      // Для отладки логируем причину недоступности
+      const reason = !activeElement ? 'отсутствует' : 
+                     (activeElement === dom.getBody() ? 'это body' : 'не редактируемый элемент');
+      logger.info(`Активный элемент не является редактируемым (причина: ${reason}), копируем в буфер обмена`);
     }
     
-    return true;
+    return isEditable;
   }
   
   /**
@@ -243,28 +244,45 @@ class PageObjectTextService {
   }
 
   /**
+   * Проверка необходимости добавления пробела в начале или в конце текста
+   * @param {HTMLElement} element - Элемент для проверки
+   * @param {boolean} isLeading - true для проверки начала, false для конца
+   * @returns {boolean} - true, если нужен пробел
+   * @private
+   */
+  _shouldAddSpace(element, isLeading) {
+    const { logger } = this._page;
+    
+    try {
+      const currentText = this._getCurrentText(element);
+      const cursorPos = this._getCursorPosition(element);
+      
+      // Быстрый выход для граничных случаев
+      if (!currentText) return false;
+      if (isLeading && cursorPos <= 0) return false;
+      if (!isLeading && cursorPos >= currentText.length) return false;
+      
+      // Выбираем символ для проверки (перед или после курсора)
+      const pos = isLeading ? cursorPos - 1 : cursorPos;
+      const char = currentText.charAt(pos);
+      
+      // Пробел нужен, если символ не пробел, не перенос и не пустой
+      return char !== ' ' && char !== '\n' && char !== '';
+    } catch (error) {
+      const spaceType = isLeading ? 'в начале' : 'в конце';
+      logger.warn(`Ошибка при проверке необходимости добавления пробела ${spaceType}:`, error);
+      return false;
+    }
+  }
+  
+  /**
    * Проверка, нужно ли добавить пробел в начале
    * @param {HTMLElement} element - Активный элемент
    * @returns {boolean} - true, если нужен пробел
    * @private
    */
   _shouldAddLeadingSpace(element) {
-    const { logger } = this._page;
-    
-    try {
-      // Получаем текущий текст и позицию курсора
-      const currentText = this._getCurrentText(element);
-      const cursorPos = this._getCursorPosition(element);
-      
-      if (cursorPos <= 0 || !currentText) return false;
-      
-      // Проверяем символ перед курсором
-      const charBeforeCursor = currentText.charAt(cursorPos - 1);
-      return charBeforeCursor !== ' ' && charBeforeCursor !== '\n' && charBeforeCursor !== '';
-    } catch (error) {
-      logger.warn('Ошибка при проверке необходимости добавления пробела в начале:', error);
-      return false;
-    }
+    return this._shouldAddSpace(element, true);
   }
 
   /**
@@ -274,22 +292,7 @@ class PageObjectTextService {
    * @private
    */
   _shouldAddTrailingSpace(element) {
-    const { logger } = this._page;
-    
-    try {
-      // Получаем текущий текст и позицию курсора
-      const currentText = this._getCurrentText(element);
-      const cursorPos = this._getCursorPosition(element);
-      
-      if (!currentText || cursorPos >= currentText.length) return false;
-      
-      // Проверяем символ после курсора
-      const charAfterCursor = currentText.charAt(cursorPos);
-      return charAfterCursor !== ' ' && charAfterCursor !== '\n' && charAfterCursor !== '';
-    } catch (error) {
-      logger.warn('Ошибка при проверке необходимости добавления пробела в конце:', error);
-      return false;
-    }
+    return this._shouldAddSpace(element, false);
   }
 
   /**
@@ -299,10 +302,11 @@ class PageObjectTextService {
    * @private
    */
   _shouldAddPeriod(text = '') {
-    if (text.length < 10) return false; // Слишком короткий текст
+    // Минимальная длина текста для добавления точки
+    const MIN_TEXT_LENGTH = 10;
     
-    const lastChar = text.charAt(text.length - 1);
-    return !/[.!?;:]/.test(lastChar); // Нет знака препинания в конце
+    // Добавляем точку только в длинный текст и если в конце нет знаков препинания
+    return text.length >= MIN_TEXT_LENGTH && !/[.!?;:]$/.test(text);
   }
 
   /**
@@ -462,13 +466,12 @@ class PageObjectTextService {
     const { EVENT, ELEMENT_TYPE } = PageObjectTextService;
     
     try {
-      // Для input и textarea
+      // Общее событие input для всех типов элементов
+      dom.dispatchEvent(element, EVENT.INPUT, true);
+      
+      // Дополнительное событие change только для полей формы
       if (element.tagName === ELEMENT_TYPE.INPUT || element.tagName === ELEMENT_TYPE.TEXTAREA) {
-        dom.dispatchEvent(element, EVENT.INPUT, true);
         dom.dispatchEvent(element, EVENT.CHANGE, true);
-      } else if (element.isContentEditable) {
-        // Для contenteditable
-        dom.dispatchEvent(element, EVENT.INPUT, true);
       }
     } catch (error) {
       logger.warn('Ошибка при генерации события изменения:', error);

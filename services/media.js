@@ -391,6 +391,7 @@ class PageObjectMediaService {
     const { logger } = this._page;
     const { MIME_TYPE } = PageObjectMediaService;
     
+    // Список возможных типов в порядке предпочтения
     const possibleTypes = [
       MIME_TYPE.MP4,
       MIME_TYPE.WEBM,
@@ -398,11 +399,12 @@ class PageObjectMediaService {
       MIME_TYPE.OGG_OPUS
     ];
     
-    for (const type of possibleTypes) {
-      if (MediaRecorder.isTypeSupported(type)) {
-        logger.info(`Браузер поддерживает формат записи: ${type}`);
-        return type;
-      }
+    // Ищем первый поддерживаемый тип
+    const supportedType = possibleTypes.find(type => MediaRecorder.isTypeSupported(type));
+    
+    if (supportedType) {
+      logger.info(`Браузер поддерживает формат записи: ${supportedType}`);
+      return supportedType;
     }
     
     logger.warn('Указанные форматы не поддерживаются, используем формат по умолчанию');
